@@ -1,0 +1,51 @@
+{
+ "dataset": "ogbn-products",
+ "model": "gcn",
+ "method": "lp",
+ "config": {
+  "hidden": 256,
+  "dropout": 0.5,
+  "lr": 0.01,
+  "wd": 0.0,
+  "epochs": 500,
+  "patience": 20,
+  "eval_every": 5,
+  "layers": 3,
+  "bn": true,
+  "st": {
+   "stages": 2,
+   "tau": 0.9,
+   "weight": 1.0
+  },
+  "cs_grid": {
+   "alpha1": [
+    0.0,
+    0.5,
+    0.8,
+    1.0
+   ],
+   "alpha2": [
+    0.0,
+    0.5,
+    0.8,
+    0.95
+   ]
+  },
+  "lp": {
+   "alpha": 0.9,
+   "iters": 50
+  }
+ },
+ "overrides": [],
+ "runs": [
+  {
+   "seed": 0,
+   "val": 0.8953284337410675,
+   "test": 0.7126317896552831
+  }
+ ],
+ "val_mean": 0.8953284337410675,
+ "val_std": 0.0,
+ "test_mean": 0.7126317896552831,
+ "test_std": 0.0
+}

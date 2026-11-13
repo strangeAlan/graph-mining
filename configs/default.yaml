@@ -1,0 +1,27 @@
+# Hyper-parameters per dataset. `common` applies to every model, `models.<name>` overrides it.
+# st: self-training (stages, confidence threshold tau, loss weight of pseudo-labels)
+# lp: label propagation used as the independent view for pseudo-label agreement
+# cs_grid: Correct & Smooth strengths, chosen per seed on validation accuracy
+
+cora: &planetoid
+  common: {hidden: 64, dropout: 0.5, lr: 0.01, wd: 5.0e-4, epochs: 500, patience: 100}
+  models:
+    gat: {hidden: 8, heads: 8, dropout: 0.6, lr: 0.005}
+    appnp: {k: 10, teleport: 0.1}
+    sign: {hops: 3, bn: false}
+  st: {stages: 3, tau: 0.7, weight: 1.0}
+  lp: {alpha: 0.9, iters: 50}
+  cs_grid: {alpha1: [0.0, 0.5, 0.8, 0.95], alpha2: [0.0, 0.5, 0.8, 0.95]}
+
+citeseer: *planetoid
+
+products:
+  common: {hidden: 256, dropout: 0.5, lr: 0.01, wd: 0.0, epochs: 500, patience: 20, eval_every: 5}
+  models:
+    mlp: {layers: 3, bn: true, lr: 0.001, batch_size: 50000}
+    gcn: {layers: 3, bn: true}
+    sage: {layers: 3, bn: true}
+    sign: {hops: 3, hidden: 512, layers: 2, input_drop: 0.1, lr: 0.001, batch_size: 50000}
+  st: {stages: 2, tau: 0.9, weight: 1.0}
+  lp: {alpha: 0.9, iters: 50}
+  cs_grid: {alpha1: [0.0, 0.5, 0.8, 1.0], alpha2: [0.0, 0.5, 0.8, 0.95]}
