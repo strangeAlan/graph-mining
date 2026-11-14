@@ -2,6 +2,7 @@
 # st: self-training (stages, confidence threshold tau, loss weight of pseudo-labels)
 # lp: label propagation used as the independent view for pseudo-label agreement
 # cs_grid: Correct & Smooth strengths, chosen per seed on validation accuracy
+# ensemble: Cooperation of Experts; Theta fitted on out-of-fold expert predictions, (gamma, reg) chosen on validation
 
 cora: &planetoid
   common: {hidden: 64, dropout: 0.5, lr: 0.01, wd: 5.0e-4, epochs: 500, patience: 100}
@@ -12,6 +13,13 @@ cora: &planetoid
   st: {stages: 3, tau: 0.7, weight: 1.0}
   lp: {alpha: 0.9, iters: 50}
   cs_grid: {alpha1: [0.0, 0.5, 0.8, 0.95], alpha2: [0.0, 0.5, 0.8, 0.95]}
+  ensemble:
+    experts: [mlp, lp, gcn, gat, appnp, sage, sign]
+    folds: 5
+    grid: {gamma: [1, 10, 100], reg: [0.0, 0.01, 0.1], epochs: 500, lr: 0.01}
+    self_train: true
+    tau: 0.7
+    pseudo_weight: 1.0
 
 citeseer: *planetoid
 
@@ -21,7 +29,14 @@ products:
     mlp: {layers: 3, bn: true, lr: 0.001, batch_size: 50000}
     gcn: {layers: 3, bn: true}
     sage: {layers: 3, bn: true}
-    sign: {hops: 3, hidden: 512, layers: 2, input_drop: 0.1, lr: 0.001, batch_size: 50000}
+    sign: {hops: 5, hidden: 512, layers: 2, input_drop: 0.2, lr: 0.001, batch_size: 50000, epochs: 1000, eval_every: 10, patience: 30}
   st: {stages: 2, tau: 0.9, weight: 1.0}
   lp: {alpha: 0.9, iters: 50}
   cs_grid: {alpha1: [0.0, 0.5, 0.8, 1.0], alpha2: [0.0, 0.5, 0.8, 0.95]}
+  ensemble:
+    experts: [mlp, lp, sign, sage]
+    folds: 3
+    grid: {gamma: [1, 10, 100], reg: [0.0, 0.01, 0.1], epochs: 500, lr: 0.01}
+    self_train: true
+    tau: 0.9
+    pseudo_weight: 1.0

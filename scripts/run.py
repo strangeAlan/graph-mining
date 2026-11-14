@@ -61,7 +61,7 @@ def main():
     if args.model == 'sign':
         ctx['feats'] = hop_features(ctx['adj'], ctx['x'], cfg['hops'])
     if args.method in ('st', 'lpst', 'lp'):
-        ctx['lp'] = label_propagation(ctx['adj'], ctx['y'], ctx['split']['train'], g.num_classes,
+        ctx['lp'], ctx['lp_signal'] = label_propagation(ctx['adj'], ctx['y'], ctx['split']['train'], g.num_classes,
                                       cfg['lp']['alpha'], cfg['lp']['iters'])
     print(f'[{args.dataset}] loaded + preprocessed in {time.time() - t0:.1f}s', flush=True)
 

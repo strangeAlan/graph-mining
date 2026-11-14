@@ -29,9 +29,12 @@ def predict(model, model_name, n, chunk=200_000):
     return torch.cat([F.softmax(model(all_idx[i:i + chunk]), 1) for i in range(0, n, chunk)])
 
 
-def fit(graph, ctx, model_name, cfg, idx, labels, weights, seed):
-    """Train a fresh model on (idx, labels, weights); early-stop on validation accuracy.
+def fit(graph, ctx, model_name, cfg, idx, labels, seed, n_true=None, pseudo_weight=1.0):
+    """Train a fresh model on (idx, labels); early-stop on validation accuracy. The first n_true
+    entries are ground-truth labels, the rest pseudo-labels: the two losses are averaged separately,
+    loss = CE_true + pseudo_weight * CE_pseudo, so the pseudo-label count does not swamp the true labels.
     Returns softmax probabilities of all nodes from the best-validation epoch."""
+    n_true = idx.numel() if n_true is None else n_true
     set_seed(seed)
     y, valid = ctx['y'], ctx['split']['valid']
     model = build_model(model_name, ctx, cfg, graph.num_classes).to(y.device)
@@ -43,8 +46,11 @@ def fit(graph, ctx, model_name, cfg, idx, labels, weights, seed):
         order = torch.randperm(idx.numel(), device=idx.device)
         for b in ([order] if bs is None else order.split(bs)):
             opt.zero_grad()
-            loss = F.cross_entropy(model(idx[b]), labels[b], reduction='none')
-            loss = (loss * weights[b]).sum() / weights[b].sum()
+            ce = F.cross_entropy(model(idx[b]), labels[b], reduction='none')
+            true = b < n_true
+            loss = ce[true].mean() if true.any() else ce.new_zeros(())
+            if (~true).any():
+                loss = loss + pseudo_weight * ce[~true].mean()
             loss.backward()
             opt.step()
         if (epoch + 1) % cfg.get('eval_every', 1):
@@ -80,8 +86,7 @@ def run_seed(graph, ctx, model_name, method, cfg, seed):
     t0 = time.time()
     y, split = ctx['y'], ctx['split']
     train = split['train']
-    ones = torch.ones(train.numel(), device=y.device)
-    probs, val = fit(graph, ctx, model_name, cfg, train, y[train], ones, seed)
+    probs, val = fit(graph, ctx, model_name, cfg, train, y[train], seed)
     stages = [{'stage': 0, 'val': val, 'test': accuracy(graph, probs.argmax(1), split['test']), 'n_pseudo': 0}]
     best_probs, best_val = probs, val
 
@@ -91,16 +96,17 @@ def run_seed(graph, ctx, model_name, method, cfg, seed):
         candidate[train] = False
         candidate[split['valid']] = False  # validation stays clean for model selection
         lp_pred = ctx['lp'].argmax(1)
+        lp_signal = ctx['lp_signal']
         for s in range(1, st['stages'] + 1):
             conf, pred = probs.max(1)
             sel = candidate & (conf >= st['tau'])
             if method == 'lpst':
-                sel &= pred == lp_pred
+                sel &= (pred == lp_pred) | ~lp_signal  # LP abstains where no label mass arrives
             pidx = sel.nonzero().view(-1)
             idx = torch.cat([train, pidx])
             labels = torch.cat([y[train], pred[pidx]])
-            weights = torch.cat([ones, torch.full((pidx.numel(),), st['weight'], device=y.device)])
-            probs, val = fit(graph, ctx, model_name, cfg, idx, labels, weights, seed + 1000 * s)
+            probs, val = fit(graph, ctx, model_name, cfg, idx, labels, seed + 1000 * s,
+                             n_true=train.numel(), pseudo_weight=st['weight'])
             stages.append({'stage': s, 'val': val, 'test': accuracy(graph, probs.argmax(1), split['test']),
                            'n_pseudo': pidx.numel(),
                            # diagnostic only: pseudo-label precision, never used for any decision

@@ -54,9 +54,14 @@ def one_hot(y, idx, n, num_classes):
 
 @torch.no_grad()
 def label_propagation(adj, y, train_idx, num_classes, alpha=0.9, iters=50):
-    """Class scores obtained by diffusing the training labels over the graph only."""
+    """Class distribution obtained by diffusing the training labels over the graph only.
+    Nodes that receive no label mass (components without training labels) get a uniform
+    distribution and has_signal=False, instead of an all-zero row whose argmax is class 0."""
     out = propagate(adj, one_hot(y, train_idx, y.numel(), num_classes), alpha, iters)
-    return out / out.sum(1, keepdim=True).clamp(min=1e-12)
+    mass = out.sum(1, keepdim=True)
+    has_signal = mass.view(-1) > 1e-12
+    out = torch.where(has_signal.view(-1, 1), out / mass.clamp(min=1e-12), torch.full_like(out, 1.0 / num_classes))
+    return out, has_signal
 
 
 @torch.no_grad()

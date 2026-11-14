@@ -1,0 +1,205 @@
+\documentclass[sigconf,nonacm]{acmart}
+
+\usepackage{booktabs}
+\usepackage{multirow}
+
+\settopmatter{printacmref=false, printccs=false, printfolios=true}
+\setcopyright{none}
+
+\begin{document}
+
+% DRAFT v1 (11/14). Basic parts filled; method/results of our own approach are being developed.
+\title{Node Classification from Small Citation Graphs to a Large Product Graph}
+
+\author{Shunyang Huang}
+% TODO: add the other group members and affiliation.
+
+\begin{abstract}
+We study semi-supervised node classification on two small citation graphs, Cora and Citeseer, and on the large co-purchase graph ogbn-products.
+We build a single code base that covers feature-only, label-only and graph neural network models, and evaluates all of them under the standard splits with the official evaluator.
+On top of these models we adapt Cooperation of Experts (CoE), a large-margin ensemble originally proposed for heterogeneous multiplex networks, to node classification, and combine it with ensemble self-training.
+% TODO: one sentence with the main result once the ogbn-products runs are finished.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+
+Node classification asks for the label of every node in a graph when only a subset of nodes is labelled.
+The node features alone are often weak predictors: in a citation graph, the bag-of-words of a paper tells part of its topic, and the papers it cites tell much of the rest.
+Graph neural networks (GNNs) combine both sources by propagating features along edges~\cite{kipf2017gcn,velickovic2018gat,gasteiger2019appnp,hamilton2017sage}, while classical label propagation uses the graph and the known labels only~\cite{zhu2002lp,zhou2004lgc}.
+
+The course task contains two settings that stress different parts of a method.
+Cora and Citeseer~\cite{sen2008collective} have a few thousand nodes and only 20 labelled nodes per class in the standard split~\cite{yang2016planetoid}, so the main difficulty is learning from very few labels.
+ogbn-products~\cite{hu2020ogb} has 2.4 million nodes and 62 million edges, so a method must also scale, and its split by sales rank makes the test nodes differ from the training nodes.
+
+We first build a common pipeline and evaluate seven reference models on all three datasets under the same protocol (Section~\ref{sec:baselines}).
+We then adapt Cooperation of Experts (CoE)~\cite{wang2025coe} to node classification.
+CoE combines several experts through a learned cooperation matrix trained with a large-margin objective.
+On graphs, the experts are models that use different information: node features only, labels only, or both through message passing.
+Because the experts fit the few training labels almost perfectly, we fit the cooperation matrix on out-of-fold predictions, and we use the combined prediction to produce pseudo-labels for a round of self-training (Section~\ref{sec:method}).
+% TODO: summary of findings.
+
+\section{Related Work}
+
+\paragraph{Graph neural networks.}
+GCN~\cite{kipf2017gcn} averages the transformed features of a node and its neighbours with a symmetric normalisation.
+GAT~\cite{velickovic2018gat} learns attention weights over neighbours.
+APPNP~\cite{gasteiger2019appnp} separates prediction from propagation and propagates the predictions with personalised PageRank, which allows a large receptive field without many layers.
+GraphSAGE~\cite{hamilton2017sage} keeps a separate weight for the node itself and for the mean of its neighbours.
+SIGN~\cite{rossi2020sign} precomputes the propagated features $\hat{A}^k X$ for several hops and trains an MLP on them, which makes training on large graphs as cheap as training an MLP.
+
+\paragraph{Label propagation.}
+Label propagation~\cite{zhu2002lp,zhou2004lgc} spreads the known labels along edges and relies on the assumption that neighbouring nodes share labels.
+Correct and Smooth (C\&S)~\cite{huang2021cs} applies two propagation steps on the output of any base model: it first propagates the errors on the training nodes to correct the predictions, and then smooths the corrected predictions over the graph.
+With a simple base model it matches or exceeds many GNNs on OGB datasets.
+
+\paragraph{Self-training on graphs.}
+Li et al.~\cite{li2018deeper} showed that GCNs need many labels to propagate information over the whole graph, and proposed to add confident predictions as pseudo-labels, including a variant that only keeps nodes on which the GCN and a random-walk model agree.
+Liu et al.~\cite{liu2022drgst} showed that high-confidence pseudo-labels can still shift the training distribution, and reweighted them accordingly.
+
+\paragraph{Ensembles.}
+Bagging~\cite{breiman1996bagging} averages models trained on resampled data, and stacking~\cite{wolpert1992stacking} trains a combiner on held-out predictions of the base models.
+Cooperation of Experts~\cite{wang2025coe} encodes each semantic space of a heterogeneous multiplex network with a dedicated expert, and combines the experts with a cooperation matrix trained with a large-margin loss; it is designed for multi-relational data.
+Here we apply the same combination to single-relation graphs, where the experts differ in the information and propagation scheme they use.
+
+\section{Task and Data}
+
+Given a graph $G=(V,E)$ with $n$ nodes, node features $X\in\mathbb{R}^{n\times d}$ and labels $y_i\in\{1,\dots,C\}$ for the training nodes $V_L\subset V$, the goal is to predict the labels of the remaining nodes.
+The setting is transductive: the whole graph, including the features of the test nodes, is available during training, but their labels are not.
+
+Table~\ref{tab:data} lists the three datasets.
+For Cora and Citeseer we use the public split of Yang et al.~\cite{yang2016planetoid} through PyTorch Geometric~\cite{fey2019pyg}: 20 labelled nodes per class, 500 validation nodes and 1{,}000 test nodes.
+Features are binary bag-of-words vectors, which we normalise to unit row sum.
+Citeseer has 48 isolated nodes and several small connected components without any labelled node.
+For ogbn-products we use the official split of OGB~\cite{hu2020ogb}: nodes are Amazon products, edges connect products bought together, features are 100-dimensional reduced bag-of-words of the product descriptions, and labels are 47 product categories.
+The split is by sales rank: the 8\% most popular products are used for training, the next 2\% for validation and the rest for testing.
+All graphs are treated as undirected without self loops.
+
+\begin{table*}[t]
+\caption{Datasets and splits.}
+\label{tab:data}
+\begin{tabular}{lrrrrr}
+\toprule
+Dataset & Nodes & Edges & Features & Classes & Train / Val / Test \\
+\midrule
+Cora & 2{,}708 & 5{,}278 & 1{,}433 & 7 & 140 / 500 / 1{,}000 \\
+Citeseer & 3{,}327 & 4{,}552 & 3{,}703 & 6 & 120 / 500 / 1{,}000 \\
+ogbn-products & 2{,}449{,}029 & 61{,}859{,}140 & 100 & 47 & 196{,}615 / 39{,}323 / 2{,}213{,}091 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+We report classification accuracy on the test nodes.
+For ogbn-products we use the official OGB evaluator.
+All model choices, including early stopping and the hyper-parameters of post-processing, are made on validation accuracy; test labels are used only for the reported numbers.
+
+\section{Methods}
+\label{sec:method}
+
+\subsection{Base models}
+
+We use $\hat{A}=\tilde{D}^{-1/2}(A+I)\tilde{D}^{-1/2}$ for the symmetrically normalised adjacency with self loops.
+All propagation steps are sparse matrix products, so no model materialises per-edge messages and all of them run full-graph on ogbn-products.
+
+\begin{itemize}
+\item \textbf{MLP} uses the node features only.
+\item \textbf{Label propagation (LP)} uses the graph and the training labels only. With $Y^{(0)}$ the one-hot matrix of training labels (zero rows elsewhere) it iterates $Y^{(t+1)}=(1-\alpha)Y^{(0)}+\alpha\hat{A}Y^{(t)}$ for 50 steps with $\alpha=0.9$. A node that receives no label mass, because its connected component has no labelled node, has no prediction.
+\item \textbf{GCN}~\cite{kipf2017gcn}, \textbf{GAT}~\cite{velickovic2018gat}, \textbf{APPNP}~\cite{gasteiger2019appnp} and \textbf{GraphSAGE}~\cite{hamilton2017sage} with mean aggregation, trained full-batch. GAT is used on the small graphs only.
+\item \textbf{SIGN}~\cite{rossi2020sign} with a linear encoder for each of the precomputed features $\hat{A}^k X$, $k=0,\dots,K$, followed by an MLP; it is trained with mini-batches of nodes.
+\end{itemize}
+
+\paragraph{Correct and Smooth.}
+We apply C\&S~\cite{huang2021cs} to the output of every model, propagating the training labels only.
+The correction and smoothing strengths are chosen on validation accuracy from $\{0, 0.5, 0.8, 0.95\}$; on ogbn-products the largest correction strength is 1.0.
+Strength 0 switches a step off, so C\&S is not applied when it does not help.
+
+\subsection{Cooperation of Experts for node classification}
+
+% DRAFT: this section describes the current implementation and will be revised with the results.
+Let $p_{j,i}\in\mathbb{R}^C$ be the predicted class distribution of expert $j\in\{1,\dots,K\}$ on node $i$.
+Following CoE~\cite{wang2025coe}, the experts are combined by a cooperation matrix,
+\begin{equation}
+z_i=\sum_{j=1}^{K}\Theta_j\,p_{j,i},\qquad \hat{y}_i=\operatorname{softmax}(z_i),
+\end{equation}
+with $\Theta_j\in\mathbb{R}^{C\times C}$, so that the trust in an expert can depend on the class it predicts.
+$\Theta$ is trained with cross-entropy and the large-margin term of CoE, which asks the probability of the true class to exceed a smooth maximum of the other classes:
+\begin{equation}
+\mathcal{L}(\Theta)=\frac{1}{|V_L|}\sum_{i\in V_L}\Big[-\log \hat{y}_{i,y_i}-\gamma\big(\hat{y}_{i,y_i}-m_i\big)\Big],
+\end{equation}
+where $m_i=\frac{1}{\beta}\log\sum_{c\neq y_i}\exp(\beta\,\hat{y}_{i,c})$ is a smooth maximum over the other classes, with $\beta=100$ as in CoE.
+We initialise $\Theta_j=s\,a_j I$, where $a_j$ is the accuracy of expert $j$, which corresponds to accuracy-weighted voting, and add an $\ell_2$ penalty $\lambda\|\Theta-\Theta^{(0)}\|^2$.
+$\gamma$ and $\lambda$ are chosen on validation accuracy.
+
+\paragraph{Out-of-fold fitting.}
+In the original setting, $\Theta$ is fitted on the predictions of the experts on their own training nodes.
+In semi-supervised node classification this does not work: with 20 labels per class every expert fits its training nodes almost perfectly, and label propagation returns the training labels unchanged.
+We therefore fit $\Theta$ on out-of-fold predictions.
+The training nodes are split into $F$ class-balanced folds; for each fold every expert is trained on the other folds and predicts the held-out fold.
+The fitted $\Theta$ is then applied to experts trained on all training nodes.
+
+\paragraph{Experts.}
+The experts are chosen to differ in the information they use: MLP (features), LP (labels and graph), and GNNs with different propagation schemes (GCN, GAT, APPNP, GraphSAGE, SIGN).
+On ogbn-products we use MLP, LP and SIGN.
+% TODO: revisit once the ogbn-products results are in (GraphSAGE is costly in the out-of-fold loop).
+
+\paragraph{Ensemble self-training.}
+The combined prediction is used to select pseudo-labels: unlabelled nodes outside the validation set whose combined confidence is at least $\tau$ receive their predicted label.
+All experts are retrained on the training labels and the pseudo-labels, with the two losses averaged separately, $\mathcal{L}=\mathcal{L}_{\text{true}}+w\,\mathcal{L}_{\text{pseudo}}$, so that a large number of pseudo-labels does not outweigh the true labels.
+The out-of-fold folds are still formed over the true training labels only.
+
+\section{Experimental Setup}
+
+\paragraph{Implementation.}
+All models are implemented in PyTorch with PyTorch Geometric~\cite{fey2019pyg}; ogbn-products is loaded and evaluated with the OGB package~\cite{hu2020ogb}.
+Experiments run on NVIDIA A100 40\,GB GPUs.
+
+\paragraph{Hyper-parameters.}
+On Cora and Citeseer all models use 64 hidden units (GAT: 8 heads of 8 units), dropout 0.5 (GAT: 0.6), learning rate 0.01 (GAT: 0.005), weight decay $5\times10^{-4}$, Adam, up to 500 epochs and early stopping with patience 100 on validation accuracy.
+APPNP uses 10 propagation steps with teleport probability 0.1, and SIGN uses 3 hops.
+On ogbn-products the full-batch models use three layers of 256 units with batch normalisation and learning rate 0.01; SIGN uses 5 hops, 512 hidden units, input dropout 0.2, learning rate 0.001 and batches of 50{,}000 nodes; the MLP uses three layers and learning rate 0.001.
+Self-training uses $\tau=0.7$ on the small graphs and $\tau=0.9$ on ogbn-products, and CoE uses $F=5$ folds on the small graphs and $F=3$ on ogbn-products.
+All hyper-parameters are listed in \texttt{configs/default.yaml} of our code.
+
+\paragraph{Seeds.}
+We report mean and standard deviation over 10 seeds on Cora and Citeseer, and over 5 seeds (3 for the full-batch GNNs) on ogbn-products.
+Label propagation is deterministic.
+
+\section{Results}
+
+\subsection{Reference models}
+\label{sec:baselines}
+
+\begin{table*}[t]
+\caption{Test accuracy (\%) of the reference models, without and with C\&S post-processing. Mean $\pm$ standard deviation over seeds; best per dataset in bold. GAT is not run on ogbn-products.}
+\label{tab:baselines}
+\input{tables/tab_baselines.tex}
+\end{table*}
+
+Table~\ref{tab:baselines} shows the reference models.
+% TODO: update the ogbn-products SIGN (retuned config) and GCN numbers when the runs finish.
+Our GNN results on the small graphs are close to the published ones: GCN reaches 82.0\% on Cora and 71.2\% on Citeseer (81.5\% and 70.3\% reported in~\cite{kipf2017gcn}), GAT 82.3\% and 72.0\% (83.0\% and 72.5\% in~\cite{velickovic2018gat}), and APPNP is the best model on Cora with 83.2\%.
+On ogbn-products, the MLP reaches 60.3\% (61.1\% on the OGB leaderboard) and GraphSAGE 78.8\%.
+Our SIGN reaches 78.0\%, below the 80.5\% reported for SIGN on the leaderboard; longer training and smaller batches did not close this gap.
+
+Three observations are relevant for the rest of the report.
+First, most of the gap between feature-only and graph models comes from label smoothness alone: C\&S on top of an MLP raises its accuracy from 58.4\% to 80.9\% on Cora and from 60.3\% to 77.9\% on ogbn-products.
+On the small graphs, C\&S adds little to the GNNs, which already propagate information over the graph.
+Second, label propagation is limited by coverage: on Citeseer it reaches only 49.8\%, because the isolated nodes and the components without labelled nodes receive no label mass.
+Third, on ogbn-products validation accuracy is about 93\% while test accuracy is about 78\%, for every model.
+The test products have lower sales rank than the training and validation products, so validation accuracy overestimates test accuracy, and model selection on validation is conservative.
+
+\subsection{Cooperation of Experts}
+
+% TODO: main CoE table (experts, voting, stacking, CoE, CoE + self-training) on the three datasets, and analysis.
+% Current Cora finding (10 seeds): the combined prediction (82.7%) does not exceed the best expert (APPNP, 83.2%);
+% ensemble self-training raises every expert by 1-2 points (APPNP 84.3%).
+
+\section{Conclusion}
+
+% TODO.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{refs}
+
+\end{document}
