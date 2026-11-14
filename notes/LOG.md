@@ -41,3 +41,20 @@
 - Reading: on Cora, 140 labels are too few to learn the fusion and the GNN experts are highly correlated; the gain comes from
   self-training, not from fusion. Products (196k labels, diverse experts) is the real test of CoE.
 - products CoE launched with experts MLP/LP/SIGN (3 folds, 3 seeds, GPU0); SAGE full-batch uses ~36 GB and >12 min per fit, left out for now.
+
+## 11/14 05:41 incident: GPU sharing with cv-3Drecon and lost runs
+- My products jobs on GPU1 (SAGE full-batch ~36 GB from 03:43) made cv-3Drecon COLMAP-RADIAL shard 1 (GPU1) hit CUDA OOM in SIFT
+  extraction at 03:54-03:56: 1113-main "playground random 20 views s2" and all 5 shard-1 cases of 1113-allviews
+  (relief_2, pipes, office, electro, delivery_area) FAILED with 0 registered. Its runtimes after 11/13 ~17:25 shared GPUs with my jobs
+  (peak_gpu_gb is per-process, unaffected).
+- A GPU guard I wrote to free both GPUs before the cv-3Drecon dense stage self-matched its pgrep pattern and fired at once,
+  killing all graph-mining jobs: Citeseer CoE (7/10 seeds, not saved: JSON written only at the end), products CoE (2.5 h, no seed yet),
+  products GCN baseline (1 seed: 77.44, +C&S 78.69), the queued SIGN re-run, and the tail of results/1114-planetoid.
+- Policy from now: no graph-mining GPU jobs while cv-3Drecon GPU stages run; per-seed incremental saving.
+- Recovery: cv-3Drecon finish_1113.sh paused (SIGSTOP), the 6 failed cases moved to cv-3Drecon/runs/_oom_failed_20261114 and re-run
+  by cv-3Drecon/scripts/rerun_1114_oom_cases.sh (resumes the finish script at the end). playground random 20 s2: 12/20 registered
+  on re-run (was FAILED) -> the failure was caused by the OOM.
+- Scripts now save the JSON after every seed (`complete` flag).
+- Graph GPU work queued behind cv-3Drecon: scripts/queue_after_3drecon.sh waits for finish_1113.sh to exit and for each GPU to have
+  no compute process; order: products GCN (3 seeds) + SIGN retuned (5 seeds) baselines -> Citeseer CoE (10) + products CoE (3).
+  Log: results/queue_after_3drecon.log.

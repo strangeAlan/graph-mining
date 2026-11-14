@@ -70,12 +70,30 @@ def main():
         out['expert_oof_acc'] = res['expert_oof_acc']
         return out
 
+    os.makedirs(args.out, exist_ok=True)
+
+    def save(runs, final):
+        """Written after every seed, so finished seeds survive an interrupted run."""
+        summary = {'dataset': g.name, 'config': conf, 'complete': final, 'runs': runs, 'mean': {}}
+        for stage in ('stage0', 'stage1'):
+            if stage not in runs[0]:
+                continue
+            for key, v in runs[0][stage].items():
+                if isinstance(v, dict):
+                    for part in ('val', 'test'):
+                        vals = [r[stage][key][part] for r in runs]
+                        summary['mean'][f'{stage}/{key}/{part}'] = [float(np.mean(vals)), float(np.std(vals))]
+        with open(osp.join(args.out, f'{g.name}_coe.json'), 'w') as f:
+            json.dump(summary, f, indent=1)
+        return summary
+
     runs = []
     for seed in range(args.seeds):
         ts = time.time()
         oof, full = train_experts(g, ctx, ens['experts'], cfg, seed, ens['folds'])
         res = combine(g, ctx, oof, full, ens['grid'])
         rec = {'seed': seed, 'stage0': evaluate(full, res)}
+        print(f"seed {seed} stage0 done: coe {rec['stage0']['coe']['test']:.4f} | {time.time() - ts:.0f}s", flush=True)
         if ens.get('self_train', False):
             # One round of ensemble self-training: confident CoE predictions on non-validation
             # unlabelled nodes become pseudo-labels for every expert, then the experts are re-combined.
@@ -91,6 +109,7 @@ def main():
                                  pseudo_precision=(pred[pidx] == y[pidx]).float().mean().item())  # diagnostic only
         rec['time_s'] = time.time() - ts
         runs.append(rec)
+        save(runs, False)
         line = ' '.join(f"{k} {v['test']:.4f}" for k, v in rec['stage0'].items() if isinstance(v, dict))
         print(f'seed {seed} stage0: {line}', flush=True)
         if 'stage1' in rec:
@@ -98,21 +117,10 @@ def main():
             print(f"seed {seed} stage1: coe {s1['coe']['test']:.4f} coe_cs {s1['coe_cs']['test']:.4f} "
                   f"n_pseudo {s1['n_pseudo']} prec {s1['pseudo_precision']:.3f} | {rec['time_s']:.0f}s", flush=True)
 
-    summary = {'dataset': g.name, 'config': conf, 'runs': runs, 'mean': {}}
-    for stage in ('stage0', 'stage1'):
-        if stage not in runs[0]:
-            continue
-        for key, v in runs[0][stage].items():
-            if isinstance(v, dict):
-                for part in ('val', 'test'):
-                    vals = [r[stage][key][part] for r in runs]
-                    summary['mean'][f'{stage}/{key}/{part}'] = [float(np.mean(vals)), float(np.std(vals))]
-    for k, (m, s) in summary['mean'].items():
+    summary = save(runs, True)
+    for k, (m, sd) in summary['mean'].items():
         if k.endswith('/test'):
-            print(f'{k:32s} {100 * m:.2f} ± {100 * s:.2f}')
-    os.makedirs(args.out, exist_ok=True)
-    with open(osp.join(args.out, f'{g.name}_coe.json'), 'w') as f:
-        json.dump(summary, f, indent=1)
+            print(f'{k:32s} {100 * m:.2f} ± {100 * sd:.2f}')
 
 
 if __name__ == '__main__':

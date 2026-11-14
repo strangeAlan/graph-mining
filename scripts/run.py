@@ -65,6 +65,21 @@ def main():
                                       cfg['lp']['alpha'], cfg['lp']['iters'])
     print(f'[{args.dataset}] loaded + preprocessed in {time.time() - t0:.1f}s', flush=True)
 
+    os.makedirs(args.out, exist_ok=True)
+    name = f'{g.name}_{args.model if args.method != "lp" else "lp"}_{args.method}'
+
+    def save(runs, final):
+        """Written after every seed, so finished seeds survive an interrupted run."""
+        summary = {'dataset': g.name, 'model': args.model, 'method': args.method, 'config': cfg,
+                   'overrides': args.set, 'complete': final, 'runs': runs}
+        for key in ('val', 'test', 'cs_val', 'cs_test'):
+            vals = [r[key] for r in runs if key in r]
+            if vals:
+                summary[key + '_mean'], summary[key + '_std'] = float(np.mean(vals)), float(np.std(vals))
+        with open(osp.join(args.out, name + '.json'), 'w') as f:
+            json.dump(summary, f, indent=1)
+        return summary
+
     if args.method == 'lp':  # deterministic, a single "seed"
         pred = ctx['lp'].argmax(1)
         runs = [{'seed': 0, 'val': accuracy(g, pred, ctx['split']['valid']),
@@ -74,20 +89,11 @@ def main():
         for seed in range(args.seeds):
             r = run_seed(g, ctx, args.model, args.method, cfg, seed)
             runs.append(r)
+            save(runs, False)
             print(f"seed {seed}: val {r['val']:.4f} test {r['test']:.4f} | +C&S val {r['cs_val']:.4f} "
                   f"test {r['cs_test']:.4f} | stage {r['chosen_stage']} | {r['time_s']:.0f}s", flush=True)
-
-    summary = {'dataset': g.name, 'model': args.model, 'method': args.method, 'config': cfg,
-               'overrides': args.set, 'runs': runs}
-    for key in ('val', 'test', 'cs_val', 'cs_test'):
-        vals = [r[key] for r in runs if key in r]
-        if vals:
-            summary[key + '_mean'], summary[key + '_std'] = float(np.mean(vals)), float(np.std(vals))
+    summary = save(runs, True)
     print({k: round(v, 4) for k, v in summary.items() if k.endswith(('_mean', '_std'))}, flush=True)
-    os.makedirs(args.out, exist_ok=True)
-    name = f'{g.name}_{args.model if args.method != "lp" else "lp"}_{args.method}'
-    with open(osp.join(args.out, name + '.json'), 'w') as f:
-        json.dump(summary, f, indent=1)
 
 
 if __name__ == '__main__':
