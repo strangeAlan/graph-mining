@@ -83,3 +83,5 @@
 - Cora random 60/20/20 (fixed split, 1624 train labels), 10 seeds, stage 0: experts APPNP 87.05, GCN 86.70, SAGE 86.38 (val-best),
   GAT 85.55, LP 83.03; acc vote 86.44, stack 86.48, CoE 86.49±0.34. reg chosen mostly 0-0.01 (Theta free), still no gain
   -> label budget is not the reason; GNN experts make similar errors.
+- Citeseer random 60/20/20 (1996 train labels), 10 seeds: experts SAGE 77.10, APPNP 76.40 (val-best), GCN 76.34, GAT 76.07,
+  LP 69.97; mean vote 77.34, acc vote 77.40, stack 77.52, CoE 77.52±0.57 -> combinations ~0.4 above the best expert, CoE = voting.

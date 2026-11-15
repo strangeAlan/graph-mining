@@ -41,7 +41,9 @@ For whoever continues the innovation part. Read together with `README.md` (layou
 3. On Cora/Citeseer CoE equals voting: above the validation-chosen expert, below the test-best expert. With 20 labels per
    class the validation search keeps the cooperation matrix close to voting (Citeseer picks the strongest pull every seed).
    With a random 60/20/20 split (1,624 labels on Cora) the matrix is free but CoE still only ties the best experts
-   (86.5 vs 86.4 val-chosen / 87.0 test-best): the reason is that the GNN experts make similar errors, not the label budget.
+   (86.5 vs 86.4 val-chosen / 87.0 test-best); on Citeseer 60/20/20 every combination incl. voting is ~0.4 above the best expert
+   (CoE 77.5, voting 77.4, best expert 77.1). Learned fusion adds nothing over voting on the citation graphs: the GNN experts
+   make similar errors; the label budget is not the reason.
 4. The CoE large-margin term never beats plain stacking (gamma = 0).
 5. Ensemble self-training lifts every expert (Cora APPNP 83.2 -> 84.3, products SIGN 77.9 -> 80.5). On the small graphs it is
    no better than single-model self-training; on products SIGN on CoE pseudo-labels beats SIGN on its own pseudo-labels after
