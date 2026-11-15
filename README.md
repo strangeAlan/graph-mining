@@ -37,7 +37,25 @@ The fixed protocol and stopping rule are in `configs/evidence.yaml`. Results inc
 split/code hashes, selected hyperparameters, paired metrics and source-support strata.
 Each expert's predictions are cached atomically in gitignored `.pt` files to avoid
 retraining when inspecting fusion. Validation selection is saved before test scoring.
-This is an experimental hypothesis; consult `notes/LOG.md` for measured outcomes.
+The first convex-router experiment did not outperform stacking. A targeted follow-up
+preserves the fitted stacking class matrices and learns node-wise scales on their
+contributions; the zero gate reproduces stacking exactly:
+
+```bash
+python scripts/run_conditional_coe.py --dataset products --device cuda:0
+python scripts/run_conditional_coe.py --dataset cora --device cuda:0
+python scripts/run_conditional_coe.py --dataset citeseer --device cuda:0
+python scripts/summarize_evidence.py results/1115-conditional-coe
+```
+
+With the same cached experts, products test accuracy is **80.27%**, versus **79.62%**
+for stacking and **79.54%** for confidence-only conditioning (one seed, no self-training).
+Removing the effective-source-count feature gives **80.15%**. Validation does not favour
+the added source-count feature, and the method does not improve consistently on the
+two citation graphs (three seeds each). This is a large-graph candidate, **not a verified
+general improvement or a demonstrated benefit of ESS**. The preset validation threshold
+for more runs was not reached; no additional gate tuning was performed.
+See `notes/LOG.md` and the two experiment directories for the complete paired results.
 
 ## Layout
 

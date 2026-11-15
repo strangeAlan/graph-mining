@@ -13,7 +13,9 @@ def main():
     for path in sorted(args.directory.glob('*_summary.json')):
         data = json.loads(path.read_text())
         for method, value in data['mean'].items():
-            rows.append({'dataset': data['manifest']['dataset'], 'seeds': len(data['runs']),
+            manifest = data['manifest']
+            dataset = manifest.get('dataset', manifest.get('source_manifest', {}).get('dataset'))
+            rows.append({'dataset': dataset, 'seeds': len(data['runs']),
                          'complete': data['complete'], 'method': method,
                          'validation_mean_pct': 100 * value['val'][0],
                          'test_mean_pct': 100 * value['test'][0],

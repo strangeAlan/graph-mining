@@ -3,6 +3,35 @@
 For whoever continues the innovation part. Read together with `README.md` (layout, commands) and `notes/LOG.md`
 (chronological record of every run and decision).
 
+## Latest continuation: 11/15, evidence-conditioned cooperation
+
+- Base commit `5e818ea`, branch `research/evidence-gated-fusion`. Initial experiment and source
+  frozen in `a4135d4`; see the new top entry in `notes/LOG.md` for full protocol and decisions.
+- The node-wise routing proposal in Section 4 below has now been tested. Added effective label
+  source count (squared total influence / sum of squared source influences), coverage, LP/model
+  compatibility and degree to a small gate, using fold-matched evidence and expert predictions.
+  Exact source counts on citation graphs; 32 random-sign probes on products. No test labels in
+  training or selection; selected configurations written before test evaluation.
+- Convex probability routing failed against stacking. A single structural diagnostic retained the
+  original class-to-class stacking matrices and learned node-wise expert scales, with the original
+  stacking result included exactly as epoch 0. Controls share every expert prediction.
+- **Candidate result, not confirmed:** products stage 0 (one seed, no self-training): stacking
+  79.622%, confidence-conditioned class fusion 79.544%, context-conditioned 80.147%, context +
+  effective source count 80.272%. The new method's gain over stacking is 0.650 pp, but the source
+  count itself adds only 0.124 pp and has no validation advantage. Validation cannot select it over
+  the simpler contextual gate. No extra seeds were launched, per the stated validation stop rule.
+- Cora/Citeseer, same 3 seeds: evidence-conditioned class fusion 82.60/71.87 versus stacking
+  82.90/71.60. Citeseer global expert rescaling reaches 72.97, so the added structural routing
+  is not justified there. Do not present this as a successful universal node-classification method.
+- Files: `src/graphmine/evidence.py`, `scripts/run_evidence.py`,
+  `scripts/run_conditional_coe.py`, `scripts/summarize_evidence.py`, `configs/evidence.yaml`,
+  `tests/test_evidence.py`. Results in `results/1115-evidence` and
+  `results/1115-conditional-coe`. The former's gitignored cache holds exact OOF/full predictions
+  (~1.5 GB), allowing subsequent fusion analysis without retraining experts. Preserve this cache.
+- Five mathematical/leakage/gradient tests pass. Both experiments are complete; GPUs released.
+  Original course report remains the established baseline report. Further research should change
+  the information or representation available to the model, rather than continue gate tweaks.
+
 ## 1. What is done
 
 - **Course base requirement (done).** Node classification on Cora, Citeseer (public Planetoid split, 10 seeds) and

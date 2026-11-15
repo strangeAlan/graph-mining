@@ -1,0 +1,300 @@
+{
+  "source_manifest": {
+    "base_commit": "5e818ea5dbf76d72e42177bebcb232ae6cb5fd12",
+    "head": "5e818ea5dbf76d72e42177bebcb232ae6cb5fd12",
+    "spec": {
+      "base_commit": "5e818ea5dbf76d72e42177bebcb232ae6cb5fd12",
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "split": "public",
+      "folds": 5,
+      "experts": [
+        "mlp",
+        "lp",
+        "gcn",
+        "gat",
+        "appnp",
+        "sage",
+        "sign"
+      ],
+      "products_experts": [
+        "mlp",
+        "lp",
+        "sign"
+      ],
+      "products_folds": 3,
+      "diffusion": {
+        "alpha": 0.9,
+        "iters": 50,
+        "probes": 32,
+        "exact_limit": 256
+      },
+      "gate": {
+        "regs": [
+          0.01,
+          0.1,
+          1.0
+        ],
+        "epochs": 400,
+        "lr": 0.03,
+        "batch_size": 32768
+      },
+      "stop_rule": "Complete paired public-split Cora and Citeseer seeds 0,1,2. Do not tune against test scores. If evidence routing fails to beat the confidence-only router and global mixture on validation, diagnose once and stop this hypothesis rather than sweep gate variants. Products seed 0 is a separate scalability/domain-shift experiment, not evidence of multi-seed significance. No self-training in this round: isolate fusion before using its predictions as supervision."
+    },
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "dataset": "citeseer",
+    "experts": [
+      "mlp",
+      "lp",
+      "gcn",
+      "gat",
+      "appnp",
+      "sage",
+      "sign"
+    ],
+    "config": {
+      "mlp": {
+        "hidden": 64,
+        "dropout": 0.5,
+        "lr": 0.01,
+        "wd": 0.0005,
+        "epochs": 500,
+        "patience": 100,
+        "st": {
+          "stages": 3,
+          "tau": 0.7,
+          "weight": 1.0
+        },
+        "cs_grid": {
+          "alpha1": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ],
+          "alpha2": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ]
+        },
+        "lp": {
+          "alpha": 0.9,
+          "iters": 50
+        }
+      },
+      "lp": {
+        "alpha": 0.9,
+        "iters": 50
+      },
+      "gcn": {
+        "hidden": 64,
+        "dropout": 0.5,
+        "lr": 0.01,
+        "wd": 0.0005,
+        "epochs": 500,
+        "patience": 100,
+        "st": {
+          "stages": 3,
+          "tau": 0.7,
+          "weight": 1.0
+        },
+        "cs_grid": {
+          "alpha1": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ],
+          "alpha2": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ]
+        },
+        "lp": {
+          "alpha": 0.9,
+          "iters": 50
+        }
+      },
+      "gat": {
+        "hidden": 8,
+        "dropout": 0.6,
+        "lr": 0.005,
+        "wd": 0.0005,
+        "epochs": 500,
+        "patience": 100,
+        "heads": 8,
+        "st": {
+          "stages": 3,
+          "tau": 0.7,
+          "weight": 1.0
+        },
+        "cs_grid": {
+          "alpha1": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ],
+          "alpha2": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ]
+        },
+        "lp": {
+          "alpha": 0.9,
+          "iters": 50
+        }
+      },
+      "appnp": {
+        "hidden": 64,
+        "dropout": 0.5,
+        "lr": 0.01,
+        "wd": 0.0005,
+        "epochs": 500,
+        "patience": 100,
+        "k": 10,
+        "teleport": 0.1,
+        "st": {
+          "stages": 3,
+          "tau": 0.7,
+          "weight": 1.0
+        },
+        "cs_grid": {
+          "alpha1": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ],
+          "alpha2": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ]
+        },
+        "lp": {
+          "alpha": 0.9,
+          "iters": 50
+        }
+      },
+      "sage": {
+        "hidden": 64,
+        "dropout": 0.5,
+        "lr": 0.01,
+        "wd": 0.0005,
+        "epochs": 500,
+        "patience": 100,
+        "st": {
+          "stages": 3,
+          "tau": 0.7,
+          "weight": 1.0
+        },
+        "cs_grid": {
+          "alpha1": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ],
+          "alpha2": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ]
+        },
+        "lp": {
+          "alpha": 0.9,
+          "iters": 50
+        }
+      },
+      "sign": {
+        "hidden": 64,
+        "dropout": 0.5,
+        "lr": 0.01,
+        "wd": 0.0005,
+        "epochs": 500,
+        "patience": 100,
+        "hops": 3,
+        "bn": false,
+        "st": {
+          "stages": 3,
+          "tau": 0.7,
+          "weight": 1.0
+        },
+        "cs_grid": {
+          "alpha1": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ],
+          "alpha2": [
+            0.0,
+            0.5,
+            0.8,
+            0.95
+          ]
+        },
+        "lp": {
+          "alpha": 0.9,
+          "iters": 50
+        }
+      }
+    },
+    "device": "cuda:1",
+    "code_hash": {
+      "scripts/run_evidence.py": "749bfb88a992af8b5003d51e40ad56f6e0974f0bc7b685188568872f36f954a5",
+      "src/graphmine/evidence.py": "2cf274dfcaa34486129ff14b758a523f101866d6de90d33127fff16b6d7ec993"
+    },
+    "torch": "2.5.1+cu124",
+    "adjacency_layout": "csr",
+    "split_hashes": {
+      "train": "fc256ff91ecfd419717ef3077f33d0d67c0cd9056b3975a8f9a3b4c2ba50bb10",
+      "valid": "e874e9d9d0c284581fd1c22fc992da678235e0c59ff3c1509830da6b76772284",
+      "test": "e85e8126e95f8d182d9e4a776c58434e549da8714291fd046a87b4583d842fe1"
+    },
+    "split_sizes": {
+      "train": 120,
+      "valid": 500,
+      "test": 1000
+    },
+    "skip_legacy": false
+  },
+  "class_matrices": "frozen stacking",
+  "modes": [
+    "global",
+    "confidence",
+    "context",
+    "evidence"
+  ],
+  "gate": {
+    "regs": [
+      0.01,
+      0.1,
+      1.0
+    ],
+    "epochs": 400,
+    "lr": 0.03,
+    "batch_size": 32768
+  },
+  "code_hash": {
+    "src/graphmine/evidence.py": "3ca1fbe5520a3d653cd144b16264aced4a0bc66282e2c2178b320e509f837719",
+    "scripts/run_conditional_coe.py": "0d829434d65e2936399672593c5ef60f112f5476f90acf90c90ad6d90011fce9"
+  },
+  "stop": "One aligned check only; no further gate variants if validation does not improve."
+}

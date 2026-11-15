@@ -156,8 +156,8 @@ def main():
     device = torch.device(args.device)
     ctx = {'x': g.x.to(device), 'y': g.y.to(device), 'edge_index': g.edge_index.to(device),
            'split': {k: v.to(device) for k, v in g.split.items()}}
-    # CSR avoids COO atomic-add variability in sparse propagation; all paired
-    # controls share these same tensors and cached predictions.
+    # CSR improves sparse propagation throughput; all paired controls share
+    # these same tensors and cached predictions (no bitwise-determinism claim).
     ctx['adj'] = gcn_adj(ctx['edge_index'], g.num_nodes).to_sparse_csr()
     if 'sage' in experts:
         ctx['adj_mean'] = mean_adj(ctx['edge_index'], g.num_nodes).to_sparse_csr()

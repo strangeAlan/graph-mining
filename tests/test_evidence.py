@@ -53,6 +53,22 @@ class EvidenceTests(unittest.TestCase):
         torch.testing.assert_close(q, p[0])
         self.assertEqual(w[0, 1].item(), 0)
 
+    def test_class_aware_zero_gate_preserves_stacking(self):
+        from graphmine.ensemble import cooperate
+        torch.manual_seed(0)
+        p = torch.randn(3, 8, 4).softmax(2)
+        theta = torch.randn(3, 4, 4)
+        gate = FusionGate(3, 5, torch.zeros(3), 1, theta)
+        # Include missing LP evidence: the static class-prior contribution must
+        # remain unchanged at zero local adaptation too.
+        q, _ = gate(p, torch.randn(8, 3, 5), torch.arange(8) % 2 == 0)
+        torch.testing.assert_close(q, cooperate(p, theta).softmax(1))
+        logq, _ = gate(p, torch.randn(8, 3, 5), torch.ones(8, dtype=torch.bool), log_output=True)
+        torch.testing.assert_close(logq.exp(), q)
+        torch.nn.functional.nll_loss(logq, torch.arange(8) % 4).backward()
+        self.assertGreater(gate.weight.grad.norm().item(), 0)
+        self.assertIsNone(gate.theta.grad)
+
 
 if __name__ == '__main__':
     unittest.main()

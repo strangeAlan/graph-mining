@@ -78,49 +78,64 @@ def fusion_features(p, stats, degree, lp_index, evidence=True):
 
 class FusionGate(torch.nn.Module):
     """Low-capacity per-expert linear router, shrunk towards a global mixture."""
-    def __init__(self, experts, features, initial_bias, lp_index):
+    def __init__(self, experts, features, initial_bias, lp_index, theta=None):
         super().__init__()
         self.bias = torch.nn.Parameter(initial_bias.clone())
         self.weight = torch.nn.Parameter(torch.zeros(experts, features, device=initial_bias.device))
         self.lp_index = lp_index
+        self.register_buffer('theta', theta)
 
-    def forward(self, p, x, signal):
+    def forward(self, p, x, signal, log_output=False):
         score = self.bias[None] + (x * self.weight[None]).sum(2)
         # Abstention is shared by the global and adaptive controls.
         score = score.clone()
-        score[:, self.lp_index] = score[:, self.lp_index].masked_fill(~signal, -1e9)
+        if self.theta is None:
+            score[:, self.lp_index] = score[:, self.lp_index].masked_fill(~signal, -1e9)
         weights = score.softmax(1)
-        probs = (p.permute(1, 0, 2) * weights[:, :, None]).sum(1)
+        if self.theta is None:
+            probs = (p.permute(1, 0, 2) * weights[:, :, None]).sum(1)
+            if log_output:
+                probs = probs.clamp_min(1e-8).log()
+        else:
+            # Equal weights reproduce the frozen class-aware baseline exactly.
+            # Uniform LP still carries its learned class-prior contribution in
+            # that baseline; a hard abstention mask would silently change it.
+            contribution = torch.einsum('knc,kdc->nkd', p, self.theta)
+            logits = (contribution * (p.size(0) * weights[:, :, None])).sum(1)
+            probs = logits.log_softmax(1) if log_output else logits.softmax(1)
         return probs, weights
 
 
 def fit_gate(oof, y_train, train_stats, train_degree, val_p, y_valid,
              val_stats, val_degree, lp_index, mode, regs=(0.01, 0.1, 1.0),
-             epochs=400, lr=0.03, batch_size=32768, seed=0):
+             epochs=400, lr=0.03, batch_size=32768, seed=0, theta=None):
     """Select only on validation accuracy (NLL breaks ties). No test inputs."""
     torch.manual_seed(seed)
-    evidence = mode == 'evidence'
+    evidence = mode in ('evidence', 'context')
     x = fusion_features(oof, train_stats, train_degree, lp_index, evidence)
     xv = fusion_features(val_p, val_stats, val_degree, lp_index, evidence)
+    if mode == 'context':  # matched evidence control: remove only source ESS
+        keep = [i for i in range(x.size(2)) if i != 8]
+        x, xv = x[:, :, keep], xv[:, :, keep]
     if mode == 'global':
         x, xv = x[:, :, :0], xv[:, :, :0]
-    center = x.mean(0)
-    scale = x.std(0, unbiased=False).clamp_min(0.1)
+    center = x.mean(0) if x.size(2) else x.new_zeros(x.size(1), 0)
+    scale = x.std(0, unbiased=False).clamp_min(0.1) if x.size(2) else x.new_ones(x.size(1), 0)
     x, xv = ((x - center) / scale).clamp(-5, 5), ((xv - center) / scale).clamp(-5, 5)
     acc = (oof.argmax(2) == y_train[None]).float().mean(1)
-    initial = acc.clamp_min(1e-4).log()
+    initial = acc.clamp_min(1e-4).log() if theta is None else torch.zeros_like(acc)
     best = None
     for reg in regs:
-        gate = FusionGate(oof.size(0), x.size(2), initial, lp_index)
+        gate = FusionGate(oof.size(0), x.size(2), initial, lp_index, theta)
         opt = torch.optim.Adam(gate.parameters(), lr=lr)
         # Reset shuffling for paired hyperparameter comparisons.
         gen = torch.Generator(device=oof.device).manual_seed(seed)
         for epoch in range(epochs + 1):
             if epoch % 20 == 0 or epoch == epochs:
                 with torch.no_grad():
-                    pv, _ = gate(val_p, xv, val_stats[:, 2].bool())
+                    pv, _ = gate(val_p, xv, val_stats[:, 2].bool(), log_output=True)
                     va = (pv.argmax(1) == y_valid).float().mean().item()
-                    nll = F.nll_loss(pv.clamp_min(1e-8).log(), y_valid).item()
+                    nll = F.nll_loss(pv, y_valid).item()
                     rank = (va, -nll)
                     if best is None or rank > best['rank']:
                         best = {'rank': rank, 'reg': reg, 'epoch': epoch,
@@ -130,8 +145,8 @@ def fit_gate(oof, y_train, train_stats, train_degree, val_p, y_valid,
             order = torch.randperm(y_train.numel(), generator=gen, device=oof.device)
             for ids in order.split(batch_size):
                 opt.zero_grad()
-                pr, _ = gate(oof[:, ids], x[ids], train_stats[ids, 2].bool())
-                loss = F.nll_loss(pr.clamp_min(1e-8).log(), y_train[ids])
+                pr, _ = gate(oof[:, ids], x[ids], train_stats[ids, 2].bool(), log_output=True)
+                loss = F.nll_loss(pr, y_train[ids])
                 # Global weights get only a weak pull; local departures are regularised.
                 loss = loss + reg * gate.weight.square().sum() + 1e-3 * (gate.bias - initial).square().sum()
                 loss.backward()
@@ -147,7 +162,9 @@ def apply_gate(gate, full, stats, degree, center, scale, mode, device, chunk=100
     for start in range(0, full.size(1), chunk):
         sl = slice(start, start + chunk)
         p, s, d = full[:, sl].to(device), stats[sl].to(device), degree[sl].to(device)
-        x = fusion_features(p, s, d, gate.lp_index, mode == 'evidence')
+        x = fusion_features(p, s, d, gate.lp_index, mode in ('evidence', 'context'))
+        if mode == 'context':
+            x = x[:, :, [i for i in range(x.size(2)) if i != 8]]
         if mode == 'global':
             x = x[:, :, :0]
         x = ((x - center) / scale).clamp(-5, 5)

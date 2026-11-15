@@ -1,0 +1,354 @@
+{
+  "manifest": {
+    "source_manifest": {
+      "base_commit": "5e818ea5dbf76d72e42177bebcb232ae6cb5fd12",
+      "head": "5e818ea5dbf76d72e42177bebcb232ae6cb5fd12",
+      "spec": {
+        "base_commit": "5e818ea5dbf76d72e42177bebcb232ae6cb5fd12",
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "split": "public",
+        "folds": 5,
+        "experts": [
+          "mlp",
+          "lp",
+          "gcn",
+          "gat",
+          "appnp",
+          "sage",
+          "sign"
+        ],
+        "products_experts": [
+          "mlp",
+          "lp",
+          "sign"
+        ],
+        "products_folds": 3,
+        "diffusion": {
+          "alpha": 0.9,
+          "iters": 50,
+          "probes": 32,
+          "exact_limit": 256
+        },
+        "gate": {
+          "regs": [
+            0.01,
+            0.1,
+            1.0
+          ],
+          "epochs": 400,
+          "lr": 0.03,
+          "batch_size": 32768
+        },
+        "stop_rule": "Complete paired public-split Cora and Citeseer seeds 0,1,2. Do not tune against test scores. If evidence routing fails to beat the confidence-only router and global mixture on validation, diagnose once and stop this hypothesis rather than sweep gate variants. Products seed 0 is a separate scalability/domain-shift experiment, not evidence of multi-seed significance. No self-training in this round: isolate fusion before using its predictions as supervision."
+      },
+      "seeds": [
+        0
+      ],
+      "dataset": "ogbn-products",
+      "experts": [
+        "mlp",
+        "lp",
+        "sign"
+      ],
+      "config": {
+        "mlp": {
+          "hidden": 256,
+          "dropout": 0.5,
+          "lr": 0.001,
+          "wd": 0.0,
+          "epochs": 500,
+          "patience": 20,
+          "eval_every": 5,
+          "layers": 3,
+          "bn": true,
+          "batch_size": 50000,
+          "st": {
+            "stages": 2,
+            "tau": 0.9,
+            "weight": 1.0
+          },
+          "cs_grid": {
+            "alpha1": [
+              0.0,
+              0.5,
+              0.8,
+              1.0
+            ],
+            "alpha2": [
+              0.0,
+              0.5,
+              0.8,
+              0.95
+            ]
+          },
+          "lp": {
+            "alpha": 0.9,
+            "iters": 50
+          }
+        },
+        "lp": {
+          "alpha": 0.9,
+          "iters": 50
+        },
+        "sign": {
+          "hidden": 512,
+          "dropout": 0.5,
+          "lr": 0.001,
+          "wd": 0.0,
+          "epochs": 1000,
+          "patience": 30,
+          "eval_every": 10,
+          "hops": 5,
+          "layers": 2,
+          "input_drop": 0.2,
+          "batch_size": 50000,
+          "st": {
+            "stages": 2,
+            "tau": 0.9,
+            "weight": 1.0
+          },
+          "cs_grid": {
+            "alpha1": [
+              0.0,
+              0.5,
+              0.8,
+              1.0
+            ],
+            "alpha2": [
+              0.0,
+              0.5,
+              0.8,
+              0.95
+            ]
+          },
+          "lp": {
+            "alpha": 0.9,
+            "iters": 50
+          }
+        }
+      },
+      "device": "cuda:0",
+      "code_hash": {
+        "scripts/run_evidence.py": "749bfb88a992af8b5003d51e40ad56f6e0974f0bc7b685188568872f36f954a5",
+        "src/graphmine/evidence.py": "2cf274dfcaa34486129ff14b758a523f101866d6de90d33127fff16b6d7ec993"
+      },
+      "torch": "2.5.1+cu124",
+      "adjacency_layout": "csr",
+      "split_hashes": {
+        "train": "bdeff6c88c0304a6588ea3f8640ab807fb5371e80f6c0c98ab98cbe98cd55f81",
+        "valid": "3195e41378e7ab0744abfbaeeb5d56340a52244e46b09aeb2c24ec5393b2052a",
+        "test": "c4bf7283403c40af28f135774bbb89b5d5e230eb75b0678090d360bdc3080b9d"
+      },
+      "split_sizes": {
+        "train": 196615,
+        "valid": 39323,
+        "test": 2213091
+      },
+      "skip_legacy": false
+    },
+    "class_matrices": "frozen stacking",
+    "modes": [
+      "global",
+      "confidence",
+      "context",
+      "evidence"
+    ],
+    "gate": {
+      "regs": [
+        0.01,
+        0.1,
+        1.0
+      ],
+      "epochs": 400,
+      "lr": 0.03,
+      "batch_size": 32768
+    },
+    "code_hash": {
+      "src/graphmine/evidence.py": "3ca1fbe5520a3d653cd144b16264aced4a0bc66282e2c2178b320e509f837719",
+      "scripts/run_conditional_coe.py": "0d829434d65e2936399672593c5ef60f112f5476f90acf90c90ad6d90011fce9"
+    },
+    "stop": "One aligned check only; no further gate variants if validation does not improve."
+  },
+  "complete": true,
+  "runs": [
+    {
+      "seed": 0,
+      "selection": {
+        "stack": {
+          "val": 0.9326602816581726,
+          "gamma": 0.0,
+          "reg": 0.0
+        },
+        "global": {
+          "rank": [
+            0.9330925941467285,
+            -0.2778685688972473
+          ],
+          "reg": 0.01,
+          "epoch": 40
+        },
+        "confidence": {
+          "rank": [
+            0.9333469271659851,
+            -0.2752755284309387
+          ],
+          "reg": 0.01,
+          "epoch": 140
+        },
+        "context": {
+          "rank": [
+            0.9333977699279785,
+            -0.28680598735809326
+          ],
+          "reg": 0.01,
+          "epoch": 280
+        },
+        "evidence": {
+          "rank": [
+            0.933321475982666,
+            -0.28710347414016724
+          ],
+          "reg": 0.01,
+          "epoch": 280
+        }
+      },
+      "methods": {
+        "stack": {
+          "val": 0.9326602751570328,
+          "test": 0.7962166942073327
+        },
+        "global": {
+          "val": 0.9330925921216591,
+          "test": 0.794312118209328
+        },
+        "confidence": {
+          "val": 0.9333468962184981,
+          "test": 0.7954426636771827
+        },
+        "context": {
+          "val": 0.9333977570378659,
+          "test": 0.8014735950758464
+        },
+        "evidence": {
+          "val": 0.9333214658088141,
+          "test": 0.8027157491490409,
+          "groups": {
+            "no_signal": {
+              "n": 60832,
+              "acc": 0.40672672277748556,
+              "expert_acc": {
+                "mlp": 0.6226821409784324,
+                "lp": 0.0361651762230405,
+                "sign": 0.5505326144134666
+              },
+              "mean_weights": {
+                "mlp": 0.30352136492729187,
+                "lp": 0.5489646196365356,
+                "sign": 0.14751394093036652
+              }
+            },
+            "ess_1_2": {
+              "n": 462,
+              "acc": 0.9242424242424242,
+              "expert_acc": {
+                "mlp": 0.7554112554112554,
+                "lp": 0.9242424242424242,
+                "sign": 0.9112554112554112
+              },
+              "mean_weights": {
+                "mlp": 0.4459134638309479,
+                "lp": 0.28872764110565186,
+                "sign": 0.26535892486572266
+              }
+            },
+            "ess_2_8": {
+              "n": 10166,
+              "acc": 0.7547708046429275,
+              "expert_acc": {
+                "mlp": 0.6447963800904978,
+                "lp": 0.744737359826874,
+                "sign": 0.7230965964981311
+              },
+              "mean_weights": {
+                "mlp": 0.40696170926094055,
+                "lp": 0.380039244890213,
+                "sign": 0.21299903094768524
+              }
+            },
+            "ess_gt8": {
+              "n": 2141631,
+              "acc": 0.8141649985455011,
+              "expert_acc": {
+                "mlp": 0.6016844171568305,
+                "lp": 0.7316484492426566,
+                "sign": 0.7854905910495319
+              },
+              "mean_weights": {
+                "mlp": 0.30030888319015503,
+                "lp": 0.3584112226963043,
+                "sign": 0.34127989411354065
+              }
+            }
+          }
+        }
+      },
+      "seconds": 68.28747034072876
+    }
+  ],
+  "mean": {
+    "stack": {
+      "val": [
+        0.9326602751570328,
+        0.0
+      ],
+      "test": [
+        0.7962166942073327,
+        0.0
+      ]
+    },
+    "global": {
+      "val": [
+        0.9330925921216591,
+        0.0
+      ],
+      "test": [
+        0.794312118209328,
+        0.0
+      ]
+    },
+    "confidence": {
+      "val": [
+        0.9333468962184981,
+        0.0
+      ],
+      "test": [
+        0.7954426636771827,
+        0.0
+      ]
+    },
+    "context": {
+      "val": [
+        0.9333977570378659,
+        0.0
+      ],
+      "test": [
+        0.8014735950758464,
+        0.0
+      ]
+    },
+    "evidence": {
+      "val": [
+        0.9333214658088141,
+        0.0
+      ],
+      "test": [
+        0.8027157491490409,
+        0.0
+      ]
+    }
+  }
+}

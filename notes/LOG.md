@@ -59,6 +59,39 @@
   epoch 0 exactly reproducing stacking. Compare confidence-only vs evidence gates with identical
   class matrices and cached experts. No new backbone fits, no test-guided hyperparameter changes.
   If this matched check does not improve validation over both controls, stop the routing direction.
+- Capacity-aligned check COMPLETE: `scripts/run_conditional_coe.py`,
+  `results/1115-conditional-coe`, same expert caches and seeds. Frozen stacking matrices are
+  reconstructed at the previously validation-selected settings (validation reproduction asserted).
+  Gate contribution is `sum_j K softmax(b+Wx)_j Theta_j p_j`, with b=W=0 at epoch 0.
+  Static class priors from the uniform LP row are retained so epoch zero exactly matches stacking;
+  no-signal status is an input to the adaptive gate, not a new hard mask on the baseline.
+  'context' removes ESS only, retaining LP compatibility, coverage, availability and degree.
+- Aligned test accuracy (%; small graphs 3 seeds, products 1):
+
+  | Method | Cora | Citeseer | products |
+  |---|---:|---:|---:|
+  | Frozen stacking | 82.90 +/- 0.16 | 71.60 +/- 0.59 | 79.622 |
+  | Global expert rescaling | 82.90 +/- 0.16 | 72.97 +/- 0.90 | 79.431 |
+  | Confidence-conditioned rescaling | 82.90 +/- 0.16 | 72.70 +/- 0.75 | 79.544 |
+  | Context gate (no ESS) | 82.63 +/- 0.41 | 71.43 +/- 0.21 | 80.147 |
+  | Evidence gate (with ESS) | 82.60 +/- 0.45 | 71.87 +/- 0.21 | 80.272 |
+
+- products validation: frozen stack 93.2660, global 93.3093, confidence 93.3347,
+  context 93.3398, evidence 93.3321 (%). Evidence improves test by +0.650 pp over stacking,
+  but is one validation node below confidence and three below context. The extra ESS feature
+  improves test only +0.124 pp over context; it has NO validation advantage. These are exploratory
+  single-seed results, not established superiority or evidence for ESS as the main contribution.
+- Decision: stop gate variants and extra seed launches under the predeclared validation rule.
+  Retain class-aware context/evidence conditioning as a products candidate, not a universal method.
+  Small-graph source-aware routing fails to improve consistently; Citeseer actually benefits more
+  from simple global rescaling. The current evidence does not justify making ESS the report's
+  primary innovation. Any future work needs a new hypothesis (e.g. label-conditioned representations
+  or genuinely new structural information), rather than another confidence/regularisation tweak.
+- Final checks: 5 unit tests passed, including exact zero-gate reconstruction of stacking and
+  non-zero gate gradients while class matrices stay frozen; compilation and `git diff --check` pass.
+  First experiment's exact implementation/results are frozen in commit `a4135d4`.
+  The follow-up also removes an empty-tensor std warning in the global router; it does not alter
+  that router's numerical definition. All runs completed; no training processes left running.
 
 ## 11/13 setup
 - Env: conda `graphmine` (py3.10, torch 2.5.1+cu124, PyG 2.8.1, OGB 1.3.6), packages via Aliyun PyPI (tsinghua 403 on this server; conda via NJU mirror with CONDARC=/dev/null).
