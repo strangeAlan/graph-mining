@@ -122,5 +122,5 @@ Findings:
 - `pgrep -f` / `pkill -f` patterns also match the shell that launched them; kill jobs by PID.
 - Label propagation returns a uniform row with `has_signal = False` for nodes whose component has no labelled node
   (Citeseer has 48 isolated nodes and several unlabelled components).
-- The node-wise experiments cache out-of-fold expert predictions under `results/1115-evidence/cache/` (~1.5 GB, gitignored),
-  so fusion variants can be re-run without retraining experts.
+- The node-wise experiments write out-of-fold expert predictions to `results/1115-evidence/cache/` (~1.5 GB, gitignored);
+  the cache of the reported runs was deleted, so re-running them retrains the experts first.
