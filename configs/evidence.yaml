@@ -1,0 +1,17 @@
+# Frozen exploration protocol, 2026-11-15. All methods reuse identical experts.
+base_commit: 5e818ea5dbf76d72e42177bebcb232ae6cb5fd12
+seeds: [0, 1, 2]
+split: public
+folds: 5
+experts: [mlp, lp, gcn, gat, appnp, sage, sign]
+products_experts: [mlp, lp, sign]
+products_folds: 3
+diffusion: {alpha: 0.9, iters: 50, probes: 32, exact_limit: 256}
+gate: {regs: [0.01, 0.1, 1.0], epochs: 400, lr: 0.03, batch_size: 32768}
+stop_rule: >-
+  Complete paired public-split Cora and Citeseer seeds 0,1,2. Do not tune against
+  test scores. If evidence routing fails to beat the confidence-only router and
+  global mixture on validation, diagnose once and stop this hypothesis rather
+  than sweep gate variants. Products seed 0 is a separate scalability/domain-shift
+  experiment, not evidence of multi-seed significance. No self-training in this
+  round: isolate fusion before using its predictions as supervision.

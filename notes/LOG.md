@@ -1,5 +1,65 @@
 # Experiment log
 
+## 11/15 new exploration: evidence-conditioned fusion (Codex)
+- Frozen base: `5e818ea5dbf76d72e42177bebcb232ae6cb5fd12`; clean working tree at start;
+  branch `research/evidence-gated-fusion`. Existing CoE experiments/report remain the baseline.
+- Constraint from prior work: global CoE margin did not beat stacking; small-graph fusion did not
+  reliably beat voting; products benefit mainly comes from LP. Do not repeat margin sweeps.
+- Hypothesis: entropy alone cannot distinguish one-source certainty from agreement among many
+  label sources. The diffusion influence concentration statistic
+  `ESS_i = (sum_j H_ij)^2 / sum_j H_ij^2`, for labelled sources j, may help a node-wise router
+  combine feature/GNN experts with LP. This is not a claim of statistically independent labels.
+- Implementation: exact source influence on small graphs (<=256 labels), 32 seeded Rademacher
+  projections otherwise; LP abstention; out-of-fold expert predictions AND evidence; a small linear
+  softmax router regularised towards a global mixture. No self-training in the first experiment.
+- Paired controls on identical cached predictions: best validation expert, mean/accuracy voting,
+  global convex mixture, confidence-only node gate, full evidence gate, old stacking and CoE.
+  Small-graph experts match old seven-expert suite; products uses MLP/LP/SIGN.
+- Protocol: `configs/evidence.yaml`; public split, seeds 0/1/2 on Cora and Citeseer, normal model
+  epoch budgets/early stopping. Split hashes, code hashes, hyperparameters and cache fingerprints
+  saved in manifests; every selected gate is written before test scoring. Test labels only used
+  for final evaluation/diagnostic strata. Cora is the success-protection case, Citeseer the sparse
+  label-coverage case. Products seed 0 is a possible independent scalability/domain-shift check.
+- Stop rule: complete the paired small-graph experiment; if evidence fails against confidence-only
+  and global routing on validation, diagnose implementation once rather than iterate test-guided
+  patches. No claim of gain before the experiment completes.
+- Related work checked: NODE-MOE (arXiv:2406.03464), Mowst (arXiv:2311.05185), and CoE
+  (arXiv:2505.20853). Node-wise gating is established; proposed course-level contribution is the
+  source-concentration evidence and its leakage-safe use, not generic mixture-of-experts novelty.
+- Mathematical checks: 4 CPU unit tests pass (same entropy/different source count, exact operator
+  and random-sign estimate, held-out labels replaced with invalid values leave predictions unchanged,
+  and no-signal LP receives exactly zero router weight). CSR propagation used for all paired methods.
+- Completed public-split seeds 0/1/2, `results/1115-evidence` (test %, population std): Cora
+  best validation expert 82.80±0.54, confidence gate 82.57±0.25, evidence gate 82.80±0.45,
+  stacking 82.90±0.16, CoE 82.37±0.25. Citeseer best validation expert 71.93±0.60,
+  confidence gate 71.67±0.68, evidence gate 71.87±0.65, stacking 71.60±0.59, CoE 71.70±0.49.
+  Evidence-vs-confidence mean validation delta: Cora +0.20 pp, Citeseer -0.13 pp.
+  **No convincing small-graph gain**; no small-graph hyperparameter patching or seed expansion.
+- One implementation/mechanism diagnosis using validation labels: high-confidence LP (>=.9) on
+  Citeseer has accuracy 41/56=73.2% for ESS<=2, versus 15/15 for ESS in (2,8]; on Cora the
+  corresponding accuracies are 34/36=94.4% and 40/41=97.6%. Sample sizes are small. Across ALL
+  nodes, larger ESS is not monotonic in LP accuracy (diffusion also crosses class boundaries).
+  ESS must be interpreted jointly with disagreement/entropy, never as calibrated correctness.
+- Numerical approximation check, 32 probes vs exact influence on validation nodes with signal:
+  relative ESS error median/p90 = 11.0%/32.1% (Cora), 10.0%/23.5% (Citeseer), seed 9173.
+- products seed 0 started as the predeclared independent large-graph check, GPU0 only, after both
+  citation experiments completed and checking there were no other GPU jobs. No cv-3Drecon work
+  is running at launch. The sparse CSR/minibatch path avoids full-batch GCN/SAGE memory cost.
+- Before products fusion results are available: confirmation will be run at unchanged settings on
+  seeds 1/2 only if evidence gating beats BOTH confidence-only gating and stacking by >=0.10 pp
+  on validation in seed 0. Otherwise stop this design after the seed-0 large-graph result.
+- products seed 0 COMPLETE (1171 s excluding preprocessing): SIGN 77.877%, global convex mixture
+  77.951%, confidence gate 78.196%, evidence gate 78.278%, stacking 79.622%, CoE 79.539%.
+  Evidence validation 93.2762% vs confidence 93.2686% and stacking 93.2660%: confirmation threshold
+  NOT met; no extra expert-training seeds. The convex-router design is not a performance innovation.
+- Targeted structural diagnosis: the convex global mixture already trails stacking by 1.67 pp.
+  The proposed gate discarded CoE's class-to-class correction matrices, so it is not a clean
+  node-conditioning extension of the working baseline. One final aligned check will freeze the
+  fitted stacking matrix and apply a zero-initialised node gate to its expert contributions, with
+  epoch 0 exactly reproducing stacking. Compare confidence-only vs evidence gates with identical
+  class matrices and cached experts. No new backbone fits, no test-guided hyperparameter changes.
+  If this matched check does not improve validation over both controls, stop the routing direction.
+
 ## 11/13 setup
 - Env: conda `graphmine` (py3.10, torch 2.5.1+cu124, PyG 2.8.1, OGB 1.3.6), packages via Aliyun PyPI (tsinghua 403 on this server; conda via NJU mirror with CONDARC=/dev/null).
 - Data (gitignored, `data/`): Planetoid public split (raw files from GitHub via proxy, ~2 MB);

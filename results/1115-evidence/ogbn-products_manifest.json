@@ -1,0 +1,150 @@
+{
+  "base_commit": "5e818ea5dbf76d72e42177bebcb232ae6cb5fd12",
+  "head": "5e818ea5dbf76d72e42177bebcb232ae6cb5fd12",
+  "spec": {
+    "base_commit": "5e818ea5dbf76d72e42177bebcb232ae6cb5fd12",
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "split": "public",
+    "folds": 5,
+    "experts": [
+      "mlp",
+      "lp",
+      "gcn",
+      "gat",
+      "appnp",
+      "sage",
+      "sign"
+    ],
+    "products_experts": [
+      "mlp",
+      "lp",
+      "sign"
+    ],
+    "products_folds": 3,
+    "diffusion": {
+      "alpha": 0.9,
+      "iters": 50,
+      "probes": 32,
+      "exact_limit": 256
+    },
+    "gate": {
+      "regs": [
+        0.01,
+        0.1,
+        1.0
+      ],
+      "epochs": 400,
+      "lr": 0.03,
+      "batch_size": 32768
+    },
+    "stop_rule": "Complete paired public-split Cora and Citeseer seeds 0,1,2. Do not tune against test scores. If evidence routing fails to beat the confidence-only router and global mixture on validation, diagnose once and stop this hypothesis rather than sweep gate variants. Products seed 0 is a separate scalability/domain-shift experiment, not evidence of multi-seed significance. No self-training in this round: isolate fusion before using its predictions as supervision."
+  },
+  "seeds": [
+    0
+  ],
+  "dataset": "ogbn-products",
+  "experts": [
+    "mlp",
+    "lp",
+    "sign"
+  ],
+  "config": {
+    "mlp": {
+      "hidden": 256,
+      "dropout": 0.5,
+      "lr": 0.001,
+      "wd": 0.0,
+      "epochs": 500,
+      "patience": 20,
+      "eval_every": 5,
+      "layers": 3,
+      "bn": true,
+      "batch_size": 50000,
+      "st": {
+        "stages": 2,
+        "tau": 0.9,
+        "weight": 1.0
+      },
+      "cs_grid": {
+        "alpha1": [
+          0.0,
+          0.5,
+          0.8,
+          1.0
+        ],
+        "alpha2": [
+          0.0,
+          0.5,
+          0.8,
+          0.95
+        ]
+      },
+      "lp": {
+        "alpha": 0.9,
+        "iters": 50
+      }
+    },
+    "lp": {
+      "alpha": 0.9,
+      "iters": 50
+    },
+    "sign": {
+      "hidden": 512,
+      "dropout": 0.5,
+      "lr": 0.001,
+      "wd": 0.0,
+      "epochs": 1000,
+      "patience": 30,
+      "eval_every": 10,
+      "hops": 5,
+      "layers": 2,
+      "input_drop": 0.2,
+      "batch_size": 50000,
+      "st": {
+        "stages": 2,
+        "tau": 0.9,
+        "weight": 1.0
+      },
+      "cs_grid": {
+        "alpha1": [
+          0.0,
+          0.5,
+          0.8,
+          1.0
+        ],
+        "alpha2": [
+          0.0,
+          0.5,
+          0.8,
+          0.95
+        ]
+      },
+      "lp": {
+        "alpha": 0.9,
+        "iters": 50
+      }
+    }
+  },
+  "device": "cuda:0",
+  "code_hash": {
+    "scripts/run_evidence.py": "749bfb88a992af8b5003d51e40ad56f6e0974f0bc7b685188568872f36f954a5",
+    "src/graphmine/evidence.py": "2cf274dfcaa34486129ff14b758a523f101866d6de90d33127fff16b6d7ec993"
+  },
+  "torch": "2.5.1+cu124",
+  "adjacency_layout": "csr",
+  "split_hashes": {
+    "train": "bdeff6c88c0304a6588ea3f8640ab807fb5371e80f6c0c98ab98cbe98cd55f81",
+    "valid": "3195e41378e7ab0744abfbaeeb5d56340a52244e46b09aeb2c24ec5393b2052a",
+    "test": "c4bf7283403c40af28f135774bbb89b5d5e230eb75b0678090d360bdc3080b9d"
+  },
+  "split_sizes": {
+    "train": 196615,
+    "valid": 39323,
+    "test": 2213091
+  },
+  "skip_legacy": false
+}

@@ -8,6 +8,37 @@ On top of the reference models we adapt Cooperation of Experts (CoE, Wang et al.
 - Experiment log with every number and decision: `notes/LOG.md`
 - State of the work and open directions for whoever continues: `HANDOFF.md`
 
+## Evidence-conditioned fusion experiment (11/15)
+
+The independent branch `research/evidence-gated-fusion` tests whether node-wise fusion
+benefits from the concentration of label-source influence, beyond prediction confidence.
+For propagation coefficients from training sources, it computes
+`ESS(i) = (sum_j H_ij)^2 / sum_j H_ij^2`: one repeatedly propagated source still counts
+as one effective source. This is an influence-concentration statistic, not a count of
+statistically independent labels. Small graphs use exact coefficients; large graphs use
+32 seeded random-sign projections. No N-by-N dense matrix is constructed.
+
+Expert predictions and graph evidence are both constructed out of fold. LP abstains
+when it receives no label mass. Three paired routers share the same frozen experts:
+global mixture weights, confidence-only node-wise weights, and evidence-conditioned
+node-wise weights. Existing voting, stacking and CoE are evaluated on those exact
+same predictions. The initial experiment has no self-training.
+
+```bash
+python -m unittest discover -s tests -v
+python scripts/run_evidence.py --dataset cora --device cuda:0 --out results/1115-evidence
+python scripts/run_evidence.py --dataset citeseer --device cuda:1 --out results/1115-evidence
+# Large-graph feasibility experiment; check shared GPU availability first:
+python scripts/run_evidence.py --dataset products --seeds 0 --device cuda:0 --out results/1115-evidence
+python scripts/summarize_evidence.py results/1115-evidence
+```
+
+The fixed protocol and stopping rule are in `configs/evidence.yaml`. Results include
+split/code hashes, selected hyperparameters, paired metrics and source-support strata.
+Each expert's predictions are cached atomically in gitignored `.pt` files to avoid
+retraining when inspecting fusion. Validation selection is saved before test scoring.
+This is an experimental hypothesis; consult `notes/LOG.md` for measured outcomes.
+
 ## Layout
 
 ```
