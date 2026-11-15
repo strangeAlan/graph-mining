@@ -1,6 +1,6 @@
 #!/bin/bash
 # Full Cora / Citeseer sweep: baselines + label propagation + self-training variants, 10 seeds each.
-OUT=${1:-results/1113-planetoid}
+OUT=${1:-results/1114-planetoid}
 mkdir -p $OUT/logs
 for ds in cora citeseer; do
   python scripts/run.py --dataset $ds --method lp --out $OUT > $OUT/logs/${ds}_lp.log 2>&1

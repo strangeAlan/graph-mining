@@ -58,3 +58,28 @@
 - Graph GPU work queued behind cv-3Drecon: scripts/queue_after_3drecon.sh waits for finish_1113.sh to exit and for each GPU to have
   no compute process; order: products GCN (3 seeds) + SIGN retuned (5 seeds) baselines -> Citeseer CoE (10) + products CoE (3).
   Log: results/queue_after_3drecon.log.
+
+## 11/14-15 queue results (after cv-3Drecon finished; GPUs exclusive)
+- products baselines, 3 seeds (results/1114-products): GCN 77.57±0.18 (+C&S 78.71), SIGN hops5 77.95±0.07 (+C&S 78.78). SAGE 78.76±0.3 (1113).
+- Citeseer CoE, 10 seeds: stage0 best expert GAT 72.04; mean vote 71.27, acc vote 71.57, stack 71.54, CoE 71.61.
+  stage1 (ensemble self-training): experts 70.9-73.2 (APPNP 73.19, GAT 73.10), CoE 72.30.
+  Single-model self-training (1114-planetoid): GCN st 73.49, lpst 73.56; APPNP st 72.77 -> ensemble ST no better than single-model ST.
+- Cora: ensemble-ST APPNP 84.32±0.34 vs single APPNP st 84.04±0.44 (within noise).
+- products CoE, 1 seed, experts MLP/LP/SIGN (3 folds, 3.1 h): stage0 SIGN 77.92, LP 71.26, MLP 60.25;
+  mean vote 79.06, acc vote 78.87, stacking 79.63, CoE 79.53 (gamma 1). Fusion +1.6 over the best expert and +0.75 over SIGN+C&S (78.78);
+  large-margin term = stacking (no gain). Stage1 (1.66M pseudo-labels, precision 0.914): SIGN 80.48, LP 78.79, CoE 80.82.
+- Reading: CoE-style fusion helps where labels are plentiful and experts use different information (products); on the
+  140-label graphs it equals voting and stays below the best expert. Margin term adds nothing over plain stacking anywhere.
+- 11/15 launched (scripts/run_1115_products.sh, results/1115-products): SIGN single-model self-training (control for ensemble ST),
+  CoE with MLP+SIGN only, stage 0 (does the gain need the LP expert?).
+
+## 11/15 controls and random split
+- products CoE with MLP + SIGN only (no LP), stage 0: 78.31 (SIGN 78.12, mean vote 78.23, stack 78.34) -> the products fusion gain
+  comes mostly from the LP expert; CoE = learned combination of LP with a feature model, better than C&S (SIGN+C&S 78.78, SAGE+C&S 79.0).
+- products SIGN single-model self-training (1 seed): val 93.18 / 93.16 / 93.05 and test 77.91 / 79.42 / 80.00 for stages 0/1/2
+  (pseudo precision 0.914, 0.857); val-selection picks stage 0. Validation does not track test across self-training rounds on the
+  sales-rank split. Compared at one round: SIGN on its own pseudo-labels 79.42 vs on CoE pseudo-labels 80.48 (CoE 80.82).
+  The report uses the one-round number for both (fixed in the ensemble design, not chosen on test).
+- Cora random 60/20/20 (fixed split, 1624 train labels), 10 seeds, stage 0: experts APPNP 87.05, GCN 86.70, SAGE 86.38 (val-best),
+  GAT 85.55, LP 83.03; acc vote 86.44, stack 86.48, CoE 86.49±0.34. reg chosen mostly 0-0.01 (Theta free), still no gain
+  -> label budget is not the reason; GNN experts make similar errors.

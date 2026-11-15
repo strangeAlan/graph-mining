@@ -1,0 +1,17 @@
+\begin{tabular}{l ccc}
+\toprule
+Method & Cora & Citeseer & ogbn-products \\
+\midrule
+\multicolumn{4}{l}{\textit{Without self-training}} \\
+Best expert, chosen on validation & 82.3\,$\pm$\,1.0 (GAT) & 71.1\,$\pm$\,0.7 (APPNP) & 77.9 (SIGN) \\
+Best expert on test (reference) & 83.2\,$\pm$\,0.9 (APPNP) & 72.0\,$\pm$\,0.7 (GAT) & 77.9 (SIGN) \\
+Mean voting & 82.8\,$\pm$\,0.4 & 71.3\,$\pm$\,0.6 & 79.1 \\
+Accuracy-weighted voting & 82.9\,$\pm$\,0.5 & 71.6\,$\pm$\,0.6 & 78.9 \\
+Stacking ($\gamma=0$) & 83.0\,$\pm$\,0.5 & 71.5\,$\pm$\,0.7 & 79.6 \\
+CoE & 82.7\,$\pm$\,0.5 & 71.6\,$\pm$\,0.6 & 79.5 \\
+\midrule\multicolumn{4}{l}{\textit{With self-training}} \\
+Single-model self-training & 82.7\,$\pm$\,0.8 (GAT) & 72.8\,$\pm$\,1.2 (APPNP) & 79.4 (SIGN$^\dagger$) \\
+Best expert, ensemble pseudo-labels & 83.7\,$\pm$\,0.4 (GAT) & 73.1\,$\pm$\,0.7 (GAT) & 80.5 (SIGN) \\
+CoE, ensemble pseudo-labels & 83.7\,$\pm$\,0.4 & 72.3\,$\pm$\,0.4 & 80.8 \\
+\bottomrule
+\end{tabular}

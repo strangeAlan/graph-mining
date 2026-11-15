@@ -2,6 +2,7 @@
 
 \usepackage{booktabs}
 \usepackage{multirow}
+\usepackage{graphicx}
 
 \settopmatter{printacmref=false, printccs=false, printfolios=true}
 \setcopyright{none}
@@ -19,7 +20,7 @@
 We study semi-supervised node classification on two small citation graphs, Cora and Citeseer, and on the large co-purchase graph ogbn-products.
 We build a single code base that covers feature-only, label-only and graph neural network models, and evaluates all of them under the standard splits with the official evaluator.
 On top of these models we adapt Cooperation of Experts (CoE), a large-margin ensemble originally proposed for heterogeneous multiplex networks, to node classification, and combine it with ensemble self-training.
-% TODO: one sentence with the main result once the ogbn-products runs are finished.
+On ogbn-products this improves its best expert by 1.6 points and the best reference model with Correct and Smooth by 0.5 points, mainly by learning how to combine label propagation with a feature-based model; on the citation graphs, where all experts are GNNs that make similar errors, it only matches the best expert.
 \end{abstract}
 
 \maketitle
@@ -39,7 +40,7 @@ We then adapt Cooperation of Experts (CoE)~\cite{wang2025coe} to node classifica
 CoE combines several experts through a learned cooperation matrix trained with a large-margin objective.
 On graphs, the experts are models that use different information: node features only, labels only, or both through message passing.
 Because the experts fit the few training labels almost perfectly, we fit the cooperation matrix on out-of-fold predictions, and we use the combined prediction to produce pseudo-labels for a round of self-training (Section~\ref{sec:method}).
-% TODO: summary of findings.
+CoE helps on ogbn-products, where label propagation and a feature-based model make different errors, and matches the best expert on the citation graphs, also when they have many labels (Section~\ref{sec:coe-results}).
 
 \section{Related Work}
 
@@ -141,8 +142,7 @@ The fitted $\Theta$ is then applied to experts trained on all training nodes.
 
 \paragraph{Experts.}
 The experts are chosen to differ in the information they use: MLP (features), LP (labels and graph), and GNNs with different propagation schemes (GCN, GAT, APPNP, GraphSAGE, SIGN).
-On ogbn-products we use MLP, LP and SIGN.
-% TODO: revisit once the ogbn-products results are in (GraphSAGE is costly in the out-of-fold loop).
+On ogbn-products we use MLP, LP and SIGN; the full-batch GNNs are left out because the out-of-fold loop would train each of them $F+1$ times per round.
 
 \paragraph{Ensemble self-training.}
 The combined prediction is used to select pseudo-labels: unlabelled nodes outside the validation set whose combined confidence is at least $\tau$ receive their predicted label.
@@ -163,7 +163,8 @@ Self-training uses $\tau=0.7$ on the small graphs and $\tau=0.9$ on ogbn-product
 All hyper-parameters are listed in \texttt{configs/default.yaml} of our code.
 
 \paragraph{Seeds.}
-We report mean and standard deviation over 10 seeds on Cora and Citeseer, and over 5 seeds (3 for the full-batch GNNs) on ogbn-products.
+We report mean and standard deviation over 10 seeds on Cora and Citeseer, where the test set has only 1{,}000 nodes and the standard deviation across seeds is 0.5--1.0 points.
+On ogbn-products the test set has 2.2 million nodes and the standard deviation is 0.1--0.3 points, so we use 3 seeds for the reference models (5 for the MLP) and a single seed for the CoE runs, which take about three hours each.
 Label propagation is deterministic.
 
 \section{Results}
@@ -178,9 +179,8 @@ Label propagation is deterministic.
 \end{table*}
 
 Table~\ref{tab:baselines} shows the reference models.
-% TODO: update the ogbn-products SIGN (retuned config) and GCN numbers when the runs finish.
 Our GNN results on the small graphs are close to the published ones: GCN reaches 82.0\% on Cora and 71.2\% on Citeseer (81.5\% and 70.3\% reported in~\cite{kipf2017gcn}), GAT 82.3\% and 72.0\% (83.0\% and 72.5\% in~\cite{velickovic2018gat}), and APPNP is the best model on Cora with 83.2\%.
-On ogbn-products, the MLP reaches 60.3\% (61.1\% on the OGB leaderboard) and GraphSAGE 78.8\%.
+On ogbn-products, the MLP reaches 60.3\% (61.1\% on the OGB leaderboard), GCN 77.6\% and GraphSAGE 78.8\%.
 Our SIGN reaches 78.0\%, below the 80.5\% reported for SIGN on the leaderboard; longer training and smaller batches did not close this gap.
 
 Three observations are relevant for the rest of the report.
@@ -191,14 +191,66 @@ Third, on ogbn-products validation accuracy is about 93\% while test accuracy is
 The test products have lower sales rank than the training and validation products, so validation accuracy overestimates test accuracy, and model selection on validation is conservative.
 
 \subsection{Cooperation of Experts}
+\label{sec:coe-results}
 
-% TODO: main CoE table (experts, voting, stacking, CoE, CoE + self-training) on the three datasets, and analysis.
-% Current Cora finding (10 seeds): the combined prediction (82.7%) does not exceed the best expert (APPNP, 83.2%);
-% ensemble self-training raises every expert by 1-2 points (APPNP 84.3%).
+\begin{table}[t]
+\caption{Test accuracy (\%) of CoE against its experts and simpler combinations. The expert in parentheses is the one with the best validation accuracy, which is the model one would deploy; the best expert on test is shown for reference. ogbn-products: one seed. $^\dagger$One round of self-training (see text); on the small graphs the number of rounds is chosen on validation.}
+\label{tab:coe}
+\resizebox{\columnwidth}{!}{\input{tables/tab_coe.tex}}
+\end{table}
+
+Table~\ref{tab:coe} compares CoE with its experts and with simpler ways of combining them.
+
+\paragraph{ogbn-products.}
+CoE reaches 79.5\%, 1.6 points above its best expert (SIGN, 77.9\%), 0.7 points above SIGN with C\&S (78.8\%) and 0.5 points above the best reference result (GraphSAGE with C\&S, 79.0\%), while the standard deviation across seeds on this dataset is 0.1--0.2 points.
+Learned combination is clearly better than voting (79.6\% for stacking and 79.5\% for CoE against 78.9\% for accuracy-weighted voting): the three experts differ strongly in accuracy, and the cooperation matrix learns how much to trust each of them for each class.
+Most of the gain comes from the label propagation expert.
+Combining only the MLP and SIGN gives 78.3\%, 0.2 points above SIGN.
+SIGN uses the features of up to five hops but no labels, and label propagation uses the labels but no features, so the two make different errors; CoE learns to combine them and does so better than C\&S, the usual way of adding label propagation to a feature-based model.
+
+\paragraph{Cora and Citeseer.}
+Here CoE performs like voting.
+It is 0.4--0.6 points above the expert that validation would choose, but below the expert that happens to be best on test (APPNP on Cora, GAT on Citeseer), and the differences between the combination methods are within one standard deviation.
+On Citeseer the validation search picks the strongest pull towards the voting initialisation in every seed, so the cooperation matrix barely moves.
+
+\paragraph{Is the number of labels the reason?}
+To separate the effect of the label budget from that of the experts, we repeat the comparison on a random 60/20/20 split of Cora and Citeseer, which gives 1{,}624 and 1{,}996 training labels instead of 140 and 120 (Table~\ref{tab:random60}).
+With many labels the validation search no longer constrains the cooperation matrix, but CoE still only matches the best experts.
+The number of labels is therefore not the main reason; the experts are.
+On the citation graphs, every GNN already propagates information along the same edges and is trained end-to-end on the labels, so the experts make similar errors, and label propagation (83.0\% on Cora with 60\% labels) is weaker than all GNNs without adding new information.
+On ogbn-products, the strongest expert does not use the labels at all, which leaves room for label propagation to correct it.
+
+\begin{table}[t]
+\caption{CoE on Cora and Citeseer with a random 60/20/20 split (10 seeds, no self-training).}
+\label{tab:random60}
+\resizebox{\columnwidth}{!}{\input{tables/tab_random60.tex}}
+\end{table}
+
+\paragraph{Large-margin term.}
+The large-margin term of CoE does not help in our setting: stacking with $\gamma=0$ is within 0.3 points of CoE on all datasets and splits.
+In the original setting of CoE the experts see different semantic spaces of a multiplex network; here they all predict from the same graph, and with out-of-fold fitting the cross-entropy alone is sufficient.
+
+\paragraph{Ensemble self-training.}
+Using the combined prediction to select pseudo-labels raises every expert: on Cora APPNP improves from 83.2\% to 84.3\%, on Citeseer GAT from 72.0\% to 73.1\%, and on ogbn-products SIGN from 77.9\% to 80.5\%, with CoE reaching 83.7\%, 72.3\% and 80.8\%.
+The selected pseudo-labels are 84\%, 72\% and 91\% correct, for about 2{,}000, 2{,}500 and 1.7 million nodes.
+On the small graphs, however, single-model self-training gives the same improvement (e.g.\ APPNP 84.0\% on Cora, GCN 73.5\% on Citeseer), so the benefit there comes from self-training itself and not from the ensemble.
+On ogbn-products the ensemble pseudo-labels are better: after one round, SIGN trained on its own pseudo-labels reaches 79.4\%, and on the CoE pseudo-labels 80.5\%; a second round of single-model self-training reaches 80.0\%.
+On this dataset validation accuracy does not follow test accuracy across rounds (it stays at about 93\% while test accuracy rises by 1.5--2.5 points), because the validation products come from the same high sales ranks as the training products.
+Model selection on validation would therefore always discard self-training on ogbn-products; we report the fixed single round used by ensemble self-training for both methods.
+
+\section{Discussion and Limitations}
+
+Our SIGN on ogbn-products is 2.5 points below the published result, and the ogbn-products CoE results use a single seed because one run takes about three hours; the gaps we report there (0.5--1.6 points) are large compared with the seed variation of the reference models.
+The full-batch GNNs were not used as experts on ogbn-products, so the expert pool there is small.
+The cooperation matrix is shared by all nodes; since the value of label propagation depends on how much label information reaches a node, a per-node weighting is a natural next step.
 
 \section{Conclusion}
 
-% TODO.
+We evaluated seven reference models on Cora, Citeseer and ogbn-products under one protocol, and adapted Cooperation of Experts to node classification by fitting the cooperation matrix on out-of-fold predictions of experts that use different information.
+On ogbn-products, CoE improves over its best expert by 1.6 points and over the best reference model with C\&S by 0.5 points, mainly by learning how to combine label propagation with a feature-based model.
+On the citation graphs it only matches the best experts, also with many labels, because the GNN experts make similar errors.
+With one round of self-training on the CoE pseudo-labels, ogbn-products accuracy reaches 80.8\%, and SIGN trained on these pseudo-labels is 1.1 points better than on its own.
+The large-margin term did not improve over plain stacking, and on the small graphs the gains of ensemble self-training are those of self-training itself.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{refs}

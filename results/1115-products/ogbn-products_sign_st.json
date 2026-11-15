@@ -1,0 +1,86 @@
+{
+ "dataset": "ogbn-products",
+ "model": "sign",
+ "method": "st",
+ "config": {
+  "hidden": 512,
+  "dropout": 0.5,
+  "lr": 0.001,
+  "wd": 0.0,
+  "epochs": 1000,
+  "patience": 30,
+  "eval_every": 10,
+  "hops": 5,
+  "layers": 2,
+  "input_drop": 0.2,
+  "batch_size": 50000,
+  "st": {
+   "stages": 2,
+   "tau": 0.9,
+   "weight": 1.0
+  },
+  "cs_grid": {
+   "alpha1": [
+    0.0,
+    0.5,
+    0.8,
+    1.0
+   ],
+   "alpha2": [
+    0.0,
+    0.5,
+    0.8,
+    0.95
+   ]
+  },
+  "lp": {
+   "alpha": 0.9,
+   "iters": 50
+  }
+ },
+ "overrides": [],
+ "complete": true,
+ "runs": [
+  {
+   "seed": 0,
+   "val": 0.9318211078643799,
+   "test": 0.7790633100943432,
+   "chosen_stage": 0,
+   "stages": [
+    {
+     "stage": 0,
+     "val": 0.9318211078643799,
+     "test": 0.7790633100943432,
+     "n_pseudo": 0
+    },
+    {
+     "stage": 1,
+     "val": 0.9316176772117615,
+     "test": 0.7942176801586559,
+     "n_pseudo": 1563837,
+     "pseudo_precision": 0.9142391085624695
+    },
+    {
+     "stage": 2,
+     "val": 0.930473268032074,
+     "test": 0.8000222313497276,
+     "n_pseudo": 1899468,
+     "pseudo_precision": 0.8570521473884583
+    }
+   ],
+   "cs_val": 0.9328128695487976,
+   "cs_test": 0.7871244336541064,
+   "cs_alpha1": 0.5,
+   "cs_alpha2": 0.5,
+   "time_s": 6646.328565597534
+  }
+ ],
+ "val_mean": 0.9318211078643799,
+ "val_std": 0.0,
+ "test_mean": 0.7790633100943432,
+ "test_std": 0.0,
+ "cs_val_mean": 0.9328128695487976,
+ "cs_val_std": 0.0,
+ "cs_test_mean": 0.7871244336541064,
+ "cs_test_std": 0.0
+}

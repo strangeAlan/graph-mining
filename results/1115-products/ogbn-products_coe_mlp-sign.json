@@ -1,0 +1,191 @@
+{
+ "dataset": "ogbn-products",
+ "config": {
+  "common": {
+   "hidden": 256,
+   "dropout": 0.5,
+   "lr": 0.01,
+   "wd": 0.0,
+   "epochs": 500,
+   "patience": 20,
+   "eval_every": 5
+  },
+  "models": {
+   "mlp": {
+    "layers": 3,
+    "bn": true,
+    "lr": 0.001,
+    "batch_size": 50000
+   },
+   "gcn": {
+    "layers": 3,
+    "bn": true
+   },
+   "sage": {
+    "layers": 3,
+    "bn": true
+   },
+   "sign": {
+    "hops": 5,
+    "hidden": 512,
+    "layers": 2,
+    "input_drop": 0.2,
+    "lr": 0.001,
+    "batch_size": 50000,
+    "epochs": 1000,
+    "eval_every": 10,
+    "patience": 30
+   }
+  },
+  "st": {
+   "stages": 2,
+   "tau": 0.9,
+   "weight": 1.0
+  },
+  "lp": {
+   "alpha": 0.9,
+   "iters": 50
+  },
+  "cs_grid": {
+   "alpha1": [
+    0.0,
+    0.5,
+    0.8,
+    1.0
+   ],
+   "alpha2": [
+    0.0,
+    0.5,
+    0.8,
+    0.95
+   ]
+  },
+  "ensemble": {
+   "experts": [
+    "mlp",
+    "sign"
+   ],
+   "folds": 3,
+   "grid": {
+    "gamma": [
+     1,
+     10,
+     100
+    ],
+    "reg": [
+     0.0,
+     0.01,
+     0.1
+    ],
+    "epochs": 500,
+    "lr": 0.01
+   },
+   "self_train": false,
+   "tau": 0.9,
+   "pseudo_weight": 1.0
+  }
+ },
+ "complete": true,
+ "runs": [
+  {
+   "seed": 0,
+   "stage0": {
+    "expert_mlp": {
+     "val": 0.7481626529003382,
+     "test": 0.6024917185962981
+    },
+    "expert_sign": {
+     "val": 0.9319227932761996,
+     "test": 0.7811522436266742
+    },
+    "mean_vote": {
+     "val": 0.9287185616560283,
+     "test": 0.7822841446646343
+    },
+    "acc_vote": {
+     "val": 0.9304478295145335,
+     "test": 0.781739205482287
+    },
+    "stack": {
+     "val": 0.9320753757343031,
+     "test": 0.7834485793851225
+    },
+    "coe": {
+     "val": 0.9318973628665158,
+     "test": 0.7831485465351402,
+     "gamma": 1,
+     "reg": 0.0
+    },
+    "coe_cs": {
+     "val": 0.9322279691696167,
+     "test": 0.7840513562252975,
+     "alpha1": 0.5,
+     "alpha2": 0.0
+    },
+    "expert_oof_acc": [
+     0.7570225596427917,
+     0.9398875832557678
+    ]
+   },
+   "time_s": 1126.5298011302948
+  }
+ ],
+ "mean": {
+  "stage0/expert_mlp/val": [
+   0.7481626529003382,
+   0.0
+  ],
+  "stage0/expert_mlp/test": [
+   0.6024917185962981,
+   0.0
+  ],
+  "stage0/expert_sign/val": [
+   0.9319227932761996,
+   0.0
+  ],
+  "stage0/expert_sign/test": [
+   0.7811522436266742,
+   0.0
+  ],
+  "stage0/mean_vote/val": [
+   0.9287185616560283,
+   0.0
+  ],
+  "stage0/mean_vote/test": [
+   0.7822841446646343,
+   0.0
+  ],
+  "stage0/acc_vote/val": [
+   0.9304478295145335,
+   0.0
+  ],
+  "stage0/acc_vote/test": [
+   0.781739205482287,
+   0.0
+  ],
+  "stage0/stack/val": [
+   0.9320753757343031,
+   0.0
+  ],
+  "stage0/stack/test": [
+   0.7834485793851225,
+   0.0
+  ],
+  "stage0/coe/val": [
+   0.9318973628665158,
+   0.0
+  ],
+  "stage0/coe/test": [
+   0.7831485465351402,
+   0.0
+  ],
+  "stage0/coe_cs/val": [
+   0.9322279691696167,
+   0.0
+  ],
+  "stage0/coe_cs/test": [
+   0.7840513562252975,
+   0.0
+  ]
+ }
+}

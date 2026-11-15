@@ -22,16 +22,28 @@ class Graph:
         return self.x.size(0)
 
 
-def load_graph(name):
+def random_split(n, seed=0, frac=(0.6, 0.2)):
+    """Random 60/20/20 split of all nodes (fixed seed), used to test the small graphs with many labels."""
+    g = torch.Generator().manual_seed(seed)
+    perm = torch.randperm(n, generator=g)
+    a, b = int(frac[0] * n), int((frac[0] + frac[1]) * n)
+    return {'train': perm[:a].sort()[0], 'valid': perm[a:b].sort()[0], 'test': perm[b:].sort()[0]}
+
+
+def load_graph(name, split='public'):
+    """split: 'public' (Planetoid / OGB standard split) or 'random60' (60/20/20, Cora and Citeseer only)."""
     name = name.lower()
     if name in ('cora', 'citeseer'):
         from torch_geometric.datasets import Planetoid
         ds = Planetoid(osp.join(DATA_ROOT, 'planetoid'),
                        {'cora': 'Cora', 'citeseer': 'CiteSeer'}[name], split='public')
         d = ds[0]
-        split = {'train': d.train_mask.nonzero().view(-1),
-                 'valid': d.val_mask.nonzero().view(-1),
-                 'test': d.test_mask.nonzero().view(-1)}
+        if split == 'random60':
+            split = random_split(d.num_nodes)
+        else:
+            split = {'train': d.train_mask.nonzero().view(-1),
+                     'valid': d.val_mask.nonzero().view(-1),
+                     'test': d.test_mask.nonzero().view(-1)}
         # Row-normalised bag-of-words features, as in Kipf & Welling (2017).
         x = d.x / d.x.sum(1, keepdim=True).clamp(min=1)
         y, num_classes = d.y, ds.num_classes

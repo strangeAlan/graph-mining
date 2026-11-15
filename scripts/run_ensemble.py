@@ -34,6 +34,9 @@ def main():
     p.add_argument('--out', required=True)
     p.add_argument('--device', default='cuda:0')
     p.add_argument('--experts', nargs='*', help='override the expert list of the config')
+    p.add_argument('--no-self-train', action='store_true', help='stage 0 only')
+    p.add_argument('--tag', default='', help='suffix of the output file name')
+    p.add_argument('--split', default='public', choices=['public', 'random60'])
     args = p.parse_args()
 
     with open(args.config) as f:
@@ -41,11 +44,13 @@ def main():
     ens = conf['ensemble']
     if args.experts:
         ens['experts'] = args.experts
+    if args.no_self_train:
+        ens['self_train'] = False
     cfg = {e: model_config(args.config, args.dataset, e) for e in ens['experts'] if e != 'lp'}
     cfg['lp'], cfg['st'] = conf['lp'], {'weight': ens['pseudo_weight']}
 
     t0 = time.time()
-    g = load_graph(args.dataset)
+    g = load_graph(args.dataset, args.split)
     dev = torch.device(args.device)
     ctx = {'x': g.x.to(dev), 'y': g.y.to(dev), 'edge_index': g.edge_index.to(dev),
            'split': {k: v.to(dev) for k, v in g.split.items()}}
@@ -83,7 +88,7 @@ def main():
                     for part in ('val', 'test'):
                         vals = [r[stage][key][part] for r in runs]
                         summary['mean'][f'{stage}/{key}/{part}'] = [float(np.mean(vals)), float(np.std(vals))]
-        with open(osp.join(args.out, f'{g.name}_coe.json'), 'w') as f:
+        with open(osp.join(args.out, f'{g.name}_coe{args.tag}.json'), 'w') as f:
             json.dump(summary, f, indent=1)
         return summary
 
