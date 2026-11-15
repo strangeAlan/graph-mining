@@ -1,5 +1,12 @@
 # Experiment log
 
+## 11/15 close-out
+- Decision (user): no further performance work or innovation search; close the project with what can be told honestly.
+- `research/evidence-gated-fusion` fast-forwarded into `main` and deleted; single branch. Node-wise cooperation is reported in the
+  Discussion of the report as an exploratory result (products +0.65 over stacking with one seed, not separable on validation;
+  no gain on Cora/Citeseer); no confirmation seeds were run.
+- HANDOFF.md folded into README (status, results, findings, practical notes). Report v1.3.
+
 ## 11/15 new exploration: evidence-conditioned fusion (Codex)
 - Frozen base: `5e818ea5dbf76d72e42177bebcb232ae6cb5fd12`; clean working tree at start;
   branch `research/evidence-gated-fusion`. Existing CoE experiments/report remain the baseline.

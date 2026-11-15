@@ -242,7 +242,11 @@ Model selection on validation would therefore always discard self-training on og
 
 Our SIGN on ogbn-products is 2.5 points below the published result, and the ogbn-products CoE results use a single seed because one run takes about three hours; the gaps we report there (0.5--1.6 points) are large compared with the seed variation of the reference models.
 The full-batch GNNs were not used as experts on ogbn-products, so the expert pool there is small.
-The cooperation matrix is shared by all nodes; since the value of label propagation depends on how much label information reaches a node, a per-node weighting is a natural next step.
+The cooperation matrix is shared by all nodes, although the value of label propagation depends on how much label information reaches a node.
+We tested one node-wise extension: a gate that rescales each expert's contribution under the fitted stacking matrices, computed from the label mass a node receives, the agreement between label propagation and the other experts, the node degree and an effective number of label sources, $(\sum_j h_{ij})^2/\sum_j h_{ij}^2$ for propagation weights $h_{ij}$ from training node $j$; a zero gate recovers stacking exactly.
+On ogbn-products (one seed) it reaches 80.3\% against 79.6\% for stacking, and 80.1\% without the source count, but validation accuracy does not separate these variants.
+On Cora and Citeseer (three seeds) it gives 82.6\% and 71.9\% against 82.9\% and 71.6\% for stacking.
+We therefore do not count it as a result; it suggests that node-dependent trust in label propagation may matter on large graphs.
 
 \section{Conclusion}
 

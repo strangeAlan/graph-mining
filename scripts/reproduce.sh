@@ -26,5 +26,14 @@ scripts/run_1115_products.sh
 # Cora / Citeseer with a random 60/20/20 split: does fusion help with many labels?             (~1 h)
 scripts/run_1115_random60.sh
 
+# Node-wise cooperation (exploratory, Discussion): routers on cached out-of-fold experts, then a gate on the
+# fitted stacking matrices. Protocol in configs/evidence.yaml.                                  (~1.5 h)
+python scripts/run_evidence.py --dataset cora --device cuda:0 --out results/1115-evidence
+python scripts/run_evidence.py --dataset citeseer --device cuda:0 --out results/1115-evidence
+python scripts/run_evidence.py --dataset products --seeds 0 --device cuda:0 --out results/1115-evidence
+for ds in products cora citeseer; do python scripts/run_conditional_coe.py --dataset $ds --device cuda:0; done
+python scripts/summarize_evidence.py results/1115-evidence
+python scripts/summarize_evidence.py results/1115-conditional-coe
+
 python scripts/make_tables.py
 bash report/build.sh report
